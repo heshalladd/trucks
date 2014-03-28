@@ -129,6 +129,22 @@ public class TheAir
 				//TODO:determine who wants to send messages
 
 				//TODO:determine whether those messages are going to make it
+            
+            ////piecewise equation skeleton for determining transmission probability
+            //double chanceToSend = 0.0;
+            //double distanceApart = Math.abs(truck1pos - truck2pos);
+            //if(distanceApart < 70)
+            //{
+            //   chanceToSend = -0.002142857*distanceApart + 1;
+            //}
+            //else if(distanceApart >= 70 && distanceApart < 100);
+            //{
+            //   chanceToSend = -(0.00094*Math.pow(distanceApart-70, 2))+0.85;
+            //}
+            //else if(distanceApart >= 100)
+            //{
+            //   chanceToSend = 0.0;
+            //}
 
 				//TODO:forward transmissions that qualify to their hosts.
 				

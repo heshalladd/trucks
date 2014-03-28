@@ -19,7 +19,8 @@ public class Truck{
    int desiredLane;
    int sequenceNumber = 1;
    int messagesPerSecond;
-   String convoyID = UUID.randomUUID().toString();
+   int orderInConvoy = 1;  //1 will signify leader of convoy
+   String convoyID = UUID.randomUUID().toString(); //id of convoy
    
    //truck properties
    double acceleration;
