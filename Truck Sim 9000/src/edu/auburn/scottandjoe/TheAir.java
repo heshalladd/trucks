@@ -23,6 +23,7 @@ public class TheAir
 		System.out.println("[NORMAL] Launching \"The Air\"");
 		int port = 0;
 		int totalMessages = 0;
+      int totalTrucks = 0;
 		if(args.length == 0)
 		{
 			System.out.println("[SEVERE] Error: Please specify a port in the command line.");
@@ -50,12 +51,8 @@ public class TheAir
 		}
 
 
-		//TODO:transmit request for status and transmission
-
-
 		while(true)
 		{
-			//receive statuses and transmissions
 			try
 			{
 				//TODO:encase this in a debug if
@@ -67,7 +64,7 @@ public class TheAir
 					//connections and therefore better response times
 
 					new MessageHandler(server.accept(),System.nanoTime()).start();
-					totalMessages++;
+					totalTrucks++;
 				}
 			}
 			catch(IOException e)
@@ -102,12 +99,18 @@ public class TheAir
 			try
 			{
 				//create input and output tools
-				BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
-				DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+				//OLD:BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
+            //OLD:DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
 				byte[] reply;
 				byte[] receivedMessage = new byte[2048];
+            
+            //TODO:transmit request for status and transmission
+            
+            
 				//retrieve message from the client
-				in.read(receivedMessage, 0, 2048);
+				in.readLine(receivedMessage, 0, 2048);
 				//grab message length
 				int length = receivedMessage[0] * 256 + receivedMessage[1];
 
@@ -122,8 +125,9 @@ public class TheAir
 				System.out.println("\"");
 				//end debug encasing
 				
-
-
+   
+            //TODO:receive statuses and transmissions
+            
 				//TODO:update status of test environment
 
 				//TODO:determine who wants to send messages
