@@ -46,7 +46,6 @@ public class TheAir
 			server = new ServerSocket(port);
 		}
 		catch(IOException e){
-			//TODO:encase in debug if
 			System.out.println("[SEVERE] Failed to open server socket.");
 			System.exit(0);
 		}
@@ -57,9 +56,7 @@ public class TheAir
 		{
 			try
 			{
-				//TODO:encase this in a debug if
 				System.out.println("[NORMAL] Status: Waiting for connections.");
-				//end debug if
 				while(true)
 				{
 					//spawn new thread to handle each connection to allow for simultaneous
@@ -71,7 +68,6 @@ public class TheAir
 			}
 			catch(IOException e)
 			{
-				//encase this in a debug if
 				System.out.println("[SEVERE] IOException in handling new connection.");
 			}
 			finally

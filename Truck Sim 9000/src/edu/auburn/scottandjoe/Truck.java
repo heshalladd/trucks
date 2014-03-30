@@ -20,7 +20,7 @@ public class Truck{
    private int sequenceNumber = 1;
    private int messagesPerSecond;
    private int orderInConvoy = 1;  //1 will signify leader of convoy
-   String convoyID = UUID.randomUUID().toString(); //id of convoy
+   private String convoyID = UUID.randomUUID().toString(); //id of convoy
    
    //truck properties
    private double acceleration;
