@@ -1,27 +1,33 @@
 package edu.auburn.scottandjoe;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Random;
 
 public class TheAir {
 
 	public static final int TICK_RATE = 10;
+	
 	public static Truck[] theTrucks = new Truck[5];
 	public static int totalTrucks = 0;
 	public static int[] totalMessages = new int[5];
+	public static int port;
+	public static String[] truckAddresses = new String[5];
+	public static boolean[] truckInitialized = new boolean[5]; //will initialize to false (desired)
 
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		System.out.println("[NORMAL] Launching \"The Air\"");
-		int port = 0;
+		port = 0;
 		if (args.length == 0) {
 			System.out
 					.println("[SEVERE] Error: Please specify a port in the command line.");
@@ -44,10 +50,10 @@ public class TheAir {
 			System.out.println("[SEVERE] Failed to open server socket.");
 			System.exit(0);
 		}
-
 		while (true) {
 			try {
 				System.out.println("[NORMAL] Status: Waiting for connections.");
+				//TODO: spawn ui thread (for displaying stuff and also waiting for start and restart keypress
 				while (true) {
 					// spawn new thread to handle each connection to allow for
 					// simultaneous
@@ -80,52 +86,99 @@ public class TheAir {
 				// create input and output tools
 				BufferedReader in = new BufferedReader(new InputStreamReader(
 						socket.getInputStream()));
-				PrintWriter out = new PrintWriter(new BufferedWriter(
-						new OutputStreamWriter(socket.getOutputStream())), true);
 				String[] receivedMessage;
+				String receivedMessageWhole = "";
 
 				// TODO:transmit request for status and transmission
 
 				while (true) {
 					// retrieve message from the client
-					receivedMessage = in.readLine().split(",");
+					receivedMessageWhole = in.readLine();
+					receivedMessage = receivedMessageWhole.split(",");
+					// scrape truck data for air cache
+					int messageTruckNumber = Integer.decode(receivedMessage[7]);
+					totalMessages[messageTruckNumber - 1]++;
+					if(truckInitialized[messageTruckNumber - 1])
+					{
+					theTrucks[messageTruckNumber - 1].setSequenceNumber(Integer.decode(receivedMessage[0]));
+                    theTrucks[messageTruckNumber - 1].setAcceleration(Double.parseDouble(receivedMessage[4]));                    
+                    theTrucks[messageTruckNumber - 1].setPos(Double.parseDouble(receivedMessage[5]));
+                    theTrucks[messageTruckNumber - 1].setSpeed(Double.parseDouble(receivedMessage[6]));
+                    theTrucks[messageTruckNumber - 1].setLane(Integer.decode(receivedMessage[8]));
+                    theTrucks[messageTruckNumber - 1].setDesiredLane(Integer.decode(receivedMessage[9]));
+                    theTrucks[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer.decode(receivedMessage[10]));
+                    theTrucks[messageTruckNumber - 1].setConvoyID(receivedMessage[11]);
+					}
+					else
+					{
+						//add address of truck to air cache of truck addresses and ports
+						truckAddresses[messageTruckNumber - 1] = socket.getRemoteSocketAddress().toString();
+						//initialize truck for cache
+						theTrucks[messageTruckNumber - 1] = new Truck(messageTruckNumber, Integer.decode(receivedMessage[8]), Double.parseDouble(receivedMessage[5]), Double.parseDouble(receivedMessage[6]), Double.parseDouble(receivedMessage[4]));
+						//add other data
+						theTrucks[messageTruckNumber - 1].setSequenceNumber(Integer.decode(receivedMessage[0]));
+	                    theTrucks[messageTruckNumber - 1].setDesiredLane(Integer.decode(receivedMessage[9]));
+	                    theTrucks[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer.decode(receivedMessage[10]));
+	                    theTrucks[messageTruckNumber - 1].setConvoyID(receivedMessage[11]);
+	                    truckInitialized[messageTruckNumber - 1] = true;
+					}
 
-					// TODO:scrape location data
+					// determine who the broadcast is in range of
+					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
+                    for(int i = 0; i < theTrucks.length; i++)
+                    {
+                    	if(i != messageTruckNumber - 1 && truckInitialized[i] && Math.abs(theTrucks[messageTruckNumber - 1].getPos() - theTrucks[i].getPos()) < 100)
+                    	{
+                    		trucksInRange.add(theTrucks[i]);
+                    	}
+                    }
 
-					// TODO:update status of test environment (add truck data
-					// from message to cached truck data)
-
-					// TODO:determine who the broadcast is in range of
-
-					// TODO:determine whether those messages are going to make
-					// it
-
-					// //piecewise equation skeleton for determining
-					// transmission probability
-					// double chanceToSend = 0.0;
-					// double distanceApart = Math.abs(truck1pos - truck2pos);
-					// if(distanceApart < 70)
-					// {
-					// chanceToSend = -0.002142857 * distanceApart + 1;
-					// }
-					// else if(distanceApart >= 70 && distanceApart < 100);
-					// {
-					// chanceToSend = -(0.00094 * Math.pow(distanceApart-70 , 2)) + 0.85;
-					// }
-					// else if(distanceApart >= 100)
-					// {
-					// chanceToSend = 0.0;
-					// }
-
-					// TODO:get address and port from "socket" for sending stuff
-					// via UDP.
-					// TODO:forward transmissions (that qualify) to their hosts
-					// as UDP.
+					// determine whether those messages are going to make it through
+                    if(trucksInRange.size() > 0)
+                    {
+					for(int i = 0; i < trucksInRange.size(); i++)
+					{
+					double chanceToSend = 0.0;
+					double distanceApart = Math.abs(theTrucks[messageTruckNumber - 1].getPos() - trucksInRange.get(i).getPos());
+					//piecewise equation for determining transmission probability
+					if(distanceApart < 70)
+					{
+						chanceToSend = -0.002142857 * distanceApart + 1;
+					}
+					else if(distanceApart >= 70 && distanceApart < 100)
+					{
+						chanceToSend = -(0.00094 * Math.pow(distanceApart-70 , 2)) + 0.85;
+					}
+					else if(distanceApart >= 100)
+					{
+						chanceToSend = 0.0;
+					}
+                    
+					//roll the dice
+					Random rand = new Random();
+					if(chanceToSend >= rand.nextDouble())
+					{
+						byte[] outBoundPacketBuf = new byte[4028];
+						outBoundPacketBuf = receivedMessageWhole.getBytes();
+						
+						//get address and port for sending stuff via UDP.
+						DatagramSocket forwardUDPSock = new DatagramSocket();
+						InetAddress truckDestination = InetAddress.getByName(truckAddresses[trucksInRange.get(i).getTruckNumber() - 1]);
+						DatagramPacket outBoundUDPPacket = new DatagramPacket(outBoundPacketBuf, outBoundPacketBuf.length, truckDestination, port);
+						
+						// forward transmissions (that qualify) to their hosts as UDP.
+						forwardUDPSock.send(outBoundUDPPacket);
+						
+						//close socket
+						forwardUDPSock.close();
+					}
+					}
+                    }
 				}
 
 			}
 
-			catch (IOException e) {
+			catch (IOException | NumberFormatException | FatalTruckException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
 			}
 

@@ -187,15 +187,16 @@ public class Truck {
 	private void updateCache(String[] message)
 	{
 		int messageTruckNumber = Integer.decode(message[7]);
-		truckSequenceCache[messageTruckNumber] = Integer.decode(message[0]);
-		truckCache[messageTruckNumber].setAcceleration(Double.parseDouble(message[4]));
-		truckCache[messageTruckNumber].setPos(Double.parseDouble(message[5]));
-		truckCache[messageTruckNumber].setSpeed(Double.parseDouble(message[6]));
-		truckCache[messageTruckNumber].setLane(Integer.decode(message[8]));
-		truckCache[messageTruckNumber].setDesiredLane(Integer.decode(message[9]));
-		truckCache[messageTruckNumber].setDesiredPlaceInConvoy(Integer.decode(message[10]));
-		truckCache[messageTruckNumber].setConvoyID(message[11]);
+		truckSequenceCache[messageTruckNumber - 1] = Integer.decode(message[0]);
+		truckCache[messageTruckNumber - 1].setAcceleration(Double.parseDouble(message[4]));
+		truckCache[messageTruckNumber - 1].setPos(Double.parseDouble(message[5]));
+		truckCache[messageTruckNumber - 1].setSpeed(Double.parseDouble(message[6]));
+		truckCache[messageTruckNumber - 1].setLane(Integer.decode(message[8]));
+		truckCache[messageTruckNumber - 1].setDesiredLane(Integer.decode(message[9]));
+		truckCache[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer.decode(message[10]));
+		truckCache[messageTruckNumber - 1].setConvoyID(message[11]);
 	}
+	
 	public void startUDPListener(DatagramSocket airUDPSocket) {
 		// start listener
 		new UDPMessageListener(airUDPSocket).start();
@@ -215,7 +216,7 @@ public class Truck {
 				// determine if message is new
 				int messageTruckNumber = Integer.decode(messageToProcess[7]);
 				int messageSequenceNumber = Integer.decode(messageToProcess[0]);
-				if (truckSequenceCache[messageTruckNumber] < messageSequenceNumber
+				if (truckSequenceCache[messageTruckNumber - 1] < messageSequenceNumber
 						&& messageTruckNumber != truckNumber) {
 
 					// update local cache
@@ -316,7 +317,7 @@ public class Truck {
 	public void setPos(double pos) {
 		this.pos = pos;
 	}
-
+	
 	public int getTruckNumber() {
 		return truckNumber;
 	}

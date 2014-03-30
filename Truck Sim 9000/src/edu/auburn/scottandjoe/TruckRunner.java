@@ -14,6 +14,7 @@ import java.util.ArrayList;
 public class TruckRunner {
 	private static int tickRate = TheAir.TICK_RATE;
 	private static boolean restarted = false;
+	private static String startMessage = "";
 	private static Truck theTruck;
 
 	/**
@@ -50,6 +51,15 @@ public class TruckRunner {
 						+ ": Air IP address: " + addr);
 				Socket airTCPSock = new Socket(addr, airPort);
 				try {
+					// wait for start
+					startMessage = "";
+					BufferedReader in = new BufferedReader(new InputStreamReader(airTCPSock.getInputStream()));
+					while (!startMessage.equals("start")) {
+						
+						startMessage = in.readLine();
+					}
+					in.close();
+					
 					// start a listener for the restart signal
 					new RestartListener(airTCPSock).start();
 					// start thread for doing message handoffs to air, and also
