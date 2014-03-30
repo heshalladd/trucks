@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 public class TheAir {
 
@@ -72,6 +73,27 @@ public class TheAir {
 				}
 			}
 		}
+	}
+	
+	private static void clearConsole()
+	{
+	    try
+	    {
+	        String os = System.getProperty("os.name");
+	        if (os.contains("Windows"))
+	        {
+	            Runtime.getRuntime().exec("cls");
+	        }
+	        else
+	        {
+	        	//linux or mac
+	            Runtime.getRuntime().exec("clear");
+	        }
+	    }
+	    catch (Exception exception)
+	    {
+	        System.out.println("[SEVERE] Error in clearing screen.");
+	    }
 	}
 
 	private static class MessageHandler extends Thread {
@@ -194,4 +216,23 @@ public class TheAir {
 
 	}
 
+	private class UIThread extends Thread {
+		private int newLane;
+		
+		public UIThread() {
+		}
+
+		public void run() {
+			//TODO: add ui here
+			
+			//TODO: display truck info (position, speed, acceleration, lane, total messages)
+			//TODO: make sure you only display trucks that have been initialized
+			//TODO: busy wait for ui thread tick to finish
+			
+			//TIP: use clearConsole() to do so.
+			//TODO: clear screen and start the loop over again
+			
+			
+		}
+	}
 }
