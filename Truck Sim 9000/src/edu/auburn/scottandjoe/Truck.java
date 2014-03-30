@@ -1,15 +1,13 @@
 package edu.auburn.scottandjoe;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.Socket;
 import java.text.DecimalFormat;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 public class Truck {
 	static final double MAX_ACCELERATION = 1.0;
@@ -29,6 +27,7 @@ public class Truck {
 	private int messagesPerSecond;
 	private int orderInConvoy = 1; // 1 will signify leader of convoy
 	private String convoyID = UUID.randomUUID().toString(); // id of convoy
+	private static ConcurrentLinkedDeque<String> incomingUDPMessages = new ConcurrentLinkedDeque<String>();
 
 	// truck properties
 	private double acceleration;
@@ -176,19 +175,41 @@ public class Truck {
 	}
 
 	public void startUDPListener(DatagramSocket airUDPSocket) {
-		// TODO: start listener
+		// start listener
 		new UDPMessageListener(airUDPSocket).start();
 	}
 
 	public ArrayList<String> handleMessage() {
 		ArrayList<String> outBoundMessages = new ArrayList<String>();
-		// TODO: check for messages on UDP from "The Air"
+		// check for messages on UDP from "The Air"
 
-		// TODO: determine if message is new
+		if (!incomingUDPMessages.isEmpty()) {
+			String[] messageToProcess;
+			String tempMessage = "";
 
-		// TODO: update local cache
+			while (!incomingUDPMessages.isEmpty()) {
+				messageToProcess = incomingUDPMessages.remove().split(",");
 
-		// TODO: return a string message to send to the air
+				// determine if message is new
+				int messageTruckNumber = Integer.decode(messageToProcess[7]);
+				int messageSequenceNumber = Integer.decode(messageToProcess[0]);
+				if (truckSequenceCache[messageTruckNumber] < messageSequenceNumber) {
+
+					// update local cache
+					truckSequenceCache[messageTruckNumber] = messageSequenceNumber;
+
+					// return a string message to send to the air
+					for (int i = 0; i < messageToProcess.length; i++) {
+						tempMessage += messageToProcess[i];
+						if (i != 0 && i != messageToProcess.length - 1) {
+							tempMessage += ",";
+						}
+					}
+					outBoundMessages.add(tempMessage);
+
+				}
+			}
+		}
 
 		return outBoundMessages;
 	}
@@ -294,14 +315,23 @@ public class Truck {
 
 	private static class UDPMessageListener extends Thread {
 		private DatagramSocket airUDPSocket;
-		private ArrayList<String> truckMessages;
 
 		public UDPMessageListener(DatagramSocket airUDPSocket) {
 			this.airUDPSocket = airUDPSocket;
 		}
 
 		public void run() {
+			byte[] receivedData = new byte[4024];
 			try {
+				while (true) {
+					DatagramPacket receivedPacket = new DatagramPacket(
+							receivedData, receivedData.length);
+					airUDPSocket.receive(receivedPacket);
+					incomingUDPMessages
+							.add(new String(receivedPacket.getData())
+									.split("\n")[0]);
+				}
+
 				// TODO:close the socket
 			} catch (IOException e) {
 				System.out

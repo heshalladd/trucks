@@ -117,8 +117,7 @@ public class TruckRunner {
 					theTruck.handleMessage();
 					// send messages to the air for appropriate forwarding
 					if (truckMessages.size() != 0) {
-						for(int i = 0; i < truckMessages.size(); i++)
-						{
+						for (int i = 0; i < truckMessages.size(); i++) {
 							out.println(truckMessages.get(i));
 						}
 					}
