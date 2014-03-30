@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.ArrayList;
 
 public class TruckRunner {
 	private static int tickRate = TheAir.TICK_RATE;
@@ -40,18 +42,19 @@ public class TruckRunner {
 				// initialize truck
 				theTruck = new Truck(truckNumber, lane, pos, speed,
 						acceleration);
+				theTruck.startUDPListener(new DatagramSocket(airPort));
 
 				// open a waiting socket and wait to be started by the server
 				InetAddress addr = InetAddress.getByName(airIP);
 				System.out.println("[NORMAL] Truck " + truckNumber
 						+ ": Air IP address: " + addr);
-				Socket tcpSock = new Socket(addr, airPort);
+				Socket airTCPSock = new Socket(addr, airPort);
 				try {
 					// start a listener for the restart signal
-					new RestartListener(tcpSock).start();
+					new RestartListener(airTCPSock).start();
 					// start thread for doing message handoffs to air, and also
 					// telling the truck to listen for broadcasts
-					new MessageHandoffHandler(tcpSock).start();
+					new MessageHandoffHandler(airTCPSock).start();
 
 					// while loop to do tick limited truck updates
 					while (!restarted) {
@@ -63,7 +66,7 @@ public class TruckRunner {
 					}
 				} finally {
 					System.out.println("[NORMAL] Closing tcp socket...");
-					tcpSock.close();
+					airTCPSock.close();
 				}
 			}
 		} catch (FatalTruckException e) {
@@ -97,7 +100,7 @@ public class TruckRunner {
 
 	private static class MessageHandoffHandler extends Thread {
 		private Socket airSocket;
-		private String truckMessage = "";
+		private ArrayList<String> truckMessages;
 
 		public MessageHandoffHandler(Socket airSocket) {
 			this.airSocket = airSocket;
@@ -105,16 +108,19 @@ public class TruckRunner {
 
 		public void run() {
 			try {
+				PrintWriter out = new PrintWriter(new BufferedWriter(
+						new OutputStreamWriter(airSocket.getOutputStream())),
+						true);
 				while (!restarted) {
-					PrintWriter out = new PrintWriter(
-							new BufferedWriter(new OutputStreamWriter(
-									airSocket.getOutputStream())), true);
-
+					truckMessages = new ArrayList<String>();
 					// tell truck to receive response
 					theTruck.handleMessage();
-					// send message to the air for appropriate forwarding
-					if (!truckMessage.equals("")) {
-						out.println(truckMessage);
+					// send messages to the air for appropriate forwarding
+					if (truckMessages.size() != 0) {
+						for(int i = 0; i < truckMessages.size(); i++)
+						{
+							out.println(truckMessages.get(i));
+						}
 					}
 				}
 			} catch (IOException e) {
@@ -122,7 +128,6 @@ public class TruckRunner {
 						.println("[SEVERE] IOException in thread that handles message handoff.");
 			}
 		}
-
 	}
 
 }
