@@ -10,7 +10,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 
 public class TheAir {
 
@@ -117,6 +116,10 @@ public class TheAir {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
 					receivedMessage = receivedMessageWhole.split(",");
+					//update sourceAddress in message if it was 0 (unset)
+					if(Integer.decode(receivedMessage[1]) == 0) {
+						receivedMessage[1] = socket.getRemoteSocketAddress().toString();
+					}
 					// scrape truck data for air cache
 					int messageTruckNumber = Integer.decode(receivedMessage[7]);
 					totalMessages[messageTruckNumber - 1]++;
@@ -130,6 +133,7 @@ public class TheAir {
                     theTrucks[messageTruckNumber - 1].setDesiredLane(Integer.decode(receivedMessage[9]));
                     theTrucks[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer.decode(receivedMessage[10]));
                     theTrucks[messageTruckNumber - 1].setConvoyID(receivedMessage[11]);
+                    theTrucks[messageTruckNumber - 1].setOrderInConvoy(Integer.decode(receivedMessage[12]));
 					}
 					else
 					{
@@ -142,6 +146,7 @@ public class TheAir {
 	                    theTrucks[messageTruckNumber - 1].setDesiredLane(Integer.decode(receivedMessage[9]));
 	                    theTrucks[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer.decode(receivedMessage[10]));
 	                    theTrucks[messageTruckNumber - 1].setConvoyID(receivedMessage[11]);
+	                    theTrucks[messageTruckNumber - 1].setOrderInConvoy(Integer.decode(receivedMessage[12]));
 	                    truckInitialized[messageTruckNumber - 1] = true;
 					}
 
