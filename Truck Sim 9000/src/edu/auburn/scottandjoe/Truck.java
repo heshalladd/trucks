@@ -8,6 +8,7 @@ import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.TimeUnit;
 
 public class Truck {
 	static final double MAX_ACCELERATION = 1.0;
@@ -23,11 +24,16 @@ public class Truck {
 	// truck meta
 	private int desiredLane;
 	private int desiredPlaceInConvoy;
-	private int sequenceNumber = 1;
-	private int messagesPerSecond;
 	private int orderInConvoy = 1; // 1 will signify leader of convoy
 	private String convoyID = UUID.randomUUID().toString(); // id of convoy
 	private static ConcurrentLinkedDeque<String> incomingUDPMessages = new ConcurrentLinkedDeque<String>();
+	private boolean changingLanes = false;
+
+	// message meta
+	private int sequenceNumber = 1;
+	private int messagesPerSecond = 100;
+	private long lastMessageTime = 0l;
+	private static DatagramSocket airUDPSocket;
 
 	// truck properties
 	private double acceleration;
@@ -160,20 +166,36 @@ public class Truck {
 	public int updatePhysical() throws FatalTruckException {
 		// update position
 		updatePosition();
-		// update acceleration
+		// update speed
 		accelerate();
-		// TODO:update lane
+		// update lane
+		if(desiredLane != lane && intentChangeLane && !changingLanes)
+		{
+			new LaneChanger(desiredLane).start();
+			changingLanes = true;
+		}
 
 		return 1;
 	}
 
 	public int updateDesires() {
-		// TODO:(maybe)update countdown to sending a broadcast to other trucks
 		// TODO:judge current state of surroundings and figure out next step
 		// towards forming a convoy
 		return 1;
 	}
-
+	
+	private void updateCache(String[] message)
+	{
+		int messageTruckNumber = Integer.decode(message[7]);
+		truckSequenceCache[messageTruckNumber] = Integer.decode(message[0]);
+		truckCache[messageTruckNumber].setAcceleration(Double.parseDouble(message[4]));
+		truckCache[messageTruckNumber].setPos(Double.parseDouble(message[5]));
+		truckCache[messageTruckNumber].setSpeed(Double.parseDouble(message[6]));
+		truckCache[messageTruckNumber].setLane(Integer.decode(message[8]));
+		truckCache[messageTruckNumber].setDesiredLane(Integer.decode(message[9]));
+		truckCache[messageTruckNumber].setDesiredPlaceInConvoy(Integer.decode(message[10]));
+		truckCache[messageTruckNumber].setConvoyID(message[11]);
+	}
 	public void startUDPListener(DatagramSocket airUDPSocket) {
 		// start listener
 		new UDPMessageListener(airUDPSocket).start();
@@ -193,11 +215,12 @@ public class Truck {
 				// determine if message is new
 				int messageTruckNumber = Integer.decode(messageToProcess[7]);
 				int messageSequenceNumber = Integer.decode(messageToProcess[0]);
-				if (truckSequenceCache[messageTruckNumber] < messageSequenceNumber) {
+				if (truckSequenceCache[messageTruckNumber] < messageSequenceNumber
+						&& messageTruckNumber != truckNumber) {
 
 					// update local cache
-					truckSequenceCache[messageTruckNumber] = messageSequenceNumber;
-
+					updateCache(messageToProcess);
+					
 					// return a string message to send to the air
 					for (int i = 0; i < messageToProcess.length; i++) {
 						tempMessage += messageToProcess[i];
@@ -209,6 +232,15 @@ public class Truck {
 
 				}
 			}
+		}
+
+		// check if it is time to send a message about this truck
+		if (((System.nanoTime() - lastMessageTime) / 1000000) > (1 / messagesPerSecond)) {
+			// create a message
+			outBoundMessages.add(createCSVMessage(truckNumber,
+					airUDPSocket.getPort(), "0"));
+			// update last message time
+			lastMessageTime = System.nanoTime();
 		}
 
 		return outBoundMessages;
@@ -223,6 +255,7 @@ public class Truck {
 				+ df.format(acceleration) + "," + df.format(pos) + ","
 				+ df.format(speed) + "," + truckNumber + "," + lane + ","
 				+ desiredLane + "," + desiredPlaceInConvoy + "," + convoyID;
+		sequenceNumber++;
 		return message;
 
 	}
@@ -248,9 +281,8 @@ public class Truck {
 		this.acceleration = acceleration;
 	}
 
-	public void setLaneIntent(int desiredLane) {
+	public void setLaneIntent() {
 		intentChangeLane = true;
-		this.desiredLane = desiredLane;
 	}
 
 	public int getDesiredLane() {
@@ -314,10 +346,9 @@ public class Truck {
 	}
 
 	private static class UDPMessageListener extends Thread {
-		private DatagramSocket airUDPSocket;
 
-		public UDPMessageListener(DatagramSocket airUDPSocket) {
-			this.airUDPSocket = airUDPSocket;
+		public UDPMessageListener(DatagramSocket UDPSocket) {
+			airUDPSocket = UDPSocket;
 		}
 
 		public void run() {
@@ -336,6 +367,26 @@ public class Truck {
 			} catch (IOException e) {
 				System.out
 						.println("[SEVERE] IOException in thread that handles message handoff.");
+			}
+		}
+	}
+	
+	private class LaneChanger extends Thread {
+		private int newLane;
+		
+		public LaneChanger(int newLane) {
+			this.newLane = newLane;
+		}
+
+		public void run() {
+			//lane changing takes five seconds
+			try {
+			    TimeUnit.SECONDS.sleep(5);
+			    setLane(newLane);
+			    changingLanes = false;
+			} catch(InterruptedException ex) {
+				changingLanes = false;
+			    Thread.currentThread().interrupt();
 			}
 		}
 	}
