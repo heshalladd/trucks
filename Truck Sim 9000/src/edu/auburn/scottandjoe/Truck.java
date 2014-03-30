@@ -13,27 +13,28 @@ public class Truck{
    public static final int RANDOMIZE_INT = -10000;
    public static final double RANDOMIZE_DOUBLE = -10000.0;
 	
-   int tickRate = TheAir.TICK_RATE;
+   private int tickRate = TheAir.TICK_RATE;
    
    //truck meta
-   int desiredLane;
-   int sequenceNumber = 1;
-   int messagesPerSecond;
-   int orderInConvoy = 1;  //1 will signify leader of convoy
+   private int desiredLane;
+   private int sequenceNumber = 1;
+   private int messagesPerSecond;
+   private int orderInConvoy = 1;  //1 will signify leader of convoy
    String convoyID = UUID.randomUUID().toString(); //id of convoy
    
    //truck properties
-   double acceleration;
-   double pos;
-   double speed = 0;
-   int truckNumber;
-   int lane;
+   private double acceleration;
+   private double pos;
+   private double speed = 0;
+   private int truckNumber;
+   private int lane;
    
    //intents
-   boolean intentChangeLane = false;
+   private boolean intentChangeLane = false;
    
-   Message theMessage = new Message();
-   ArrayList truckCache = new ArrayList<Truck>();
+   //caching
+   private Truck[] truckCache = new Truck[5];
+   private int[] truckSequenceCache = new int[5]; 
 	
 	//initializes a truck object. truck numbering conflicts are not handled, and are the truck runners responsibility
    public Truck(int truckNumber, int lane, double pos, double speed, double acceleration) throws FatalTruckException
@@ -93,7 +94,7 @@ public class Truck{
             this.speed = mean + std*rand.nextGaussian();
             tries++;
          }
-         System.out.println("[NORMAL] Truck speed randomly initialized to " + this.speed + " after " + " tries.");
+         System.out.println("[NORMAL] Truck speed randomly initialized to " + this.speed + " after " + tries + " tries.");
       }
    	
       if(acceleration != RANDOMIZE_DOUBLE)
@@ -164,6 +165,19 @@ public class Truck{
       return 1;
    }
 
+   public String handleMessage()
+   {
+	   //TODO: receive messages on UDP from "The Air"
+	   
+	   //TODO: determine if message is new
+	   
+	   //TODO: update local cache
+	   
+	   //TODO: return a string message to send to the air
+	   
+	   return "";
+   }
+   
    public void setLane(int lane)
    {
       this.lane = lane;
@@ -194,19 +208,6 @@ public class Truck{
    {
       intentChangeLane = true;
       this.desiredLane = desiredLane;
-   }
-	
-	
-	
-	
-	//TODO:messages to be broadcasted. will update after reading project requirements again
-   private class Message
-   {
-      public Message()
-      {
-         
-      }
-   	
    }
 }
 

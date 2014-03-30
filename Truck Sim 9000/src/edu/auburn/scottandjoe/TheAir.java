@@ -1,19 +1,22 @@
 package edu.auburn.scottandjoe;
 
 
-import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.DataOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
 
 public class TheAir 
 {
 
 	public static final int TICK_RATE = 10;
-	ArrayList<Truck> Trucks = new ArrayList<Truck>();
+	public static Truck[] theTrucks = new Truck[5];
+	public static int totalTrucks = 0;
+	public static int[] totalMessages = new int[5];
 
 	/**
 	 * @param args
@@ -22,8 +25,6 @@ public class TheAir
 	{
 		System.out.println("[NORMAL] Launching \"The Air\"");
 		int port = 0;
-		int totalMessages = 0;
-      int totalTrucks = 0;
 		if(args.length == 0)
 		{
 			System.out.println("[SEVERE] Error: Please specify a port in the command line.");
@@ -49,6 +50,7 @@ public class TheAir
 			System.out.println("[SEVERE] Failed to open server socket.");
 			System.exit(0);
 		}
+		
 
 
 		while(true)
@@ -100,37 +102,23 @@ public class TheAir
 			{
 				//create input and output tools
 				//OLD:BufferedInputStream in = new BufferedInputStream(socket.getInputStream());
-            //OLD:DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
-				byte[] reply;
-				byte[] receivedMessage = new byte[2048];
+				//OLD:DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+				BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+				PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+				String reply;
+				String[] receivedMessage;
             
-            //TODO:transmit request for status and transmission
+				//TODO:transmit request for status and transmission
             
             
 				//retrieve message from the client
-				in.readLine(receivedMessage, 0, 2048);
-				//grab message length
-				int length = receivedMessage[0] * 256 + receivedMessage[1];
-
-				//TODO:encase in debug if
-				System.out.println("[NORMAL] Message of length " 
-						+ length + " received.");
-				System.out.print("[NORMAL] Original Message \"");
-				for(int i = 5; i < length; i++)
-				{
-					System.out.print((char)receivedMessage[i]);
-				}
-				System.out.println("\"");
-				//end debug encasing
-				
+				receivedMessage = in.readLine().split(",");				
    
-            //TODO:receive statuses and transmissions
+				//TODO:scrape location data
             
 				//TODO:update status of test environment
 
-				//TODO:determine who wants to send messages
+				//TODO:determine who the broadcast is in range of
 
 				//TODO:determine whether those messages are going to make it
             
