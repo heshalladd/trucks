@@ -61,19 +61,19 @@ public class TruckRunner {
 
 						startMessage = in.readLine();
 					}
-
-					// start a listener for the restart signal
-					new RestartListener(airTCPSock).start();
 					// start thread for doing message handoffs to air, and also
 					// telling the truck to listen for broadcasts
 					new MessageHandoffHandler(airTCPSock).start();
-
+					// start a listener for the restart signal
+					new RestartListener(airTCPSock).start();
+					// start ui thread
+					new UIThread().start();
 					// while loop to do tick limited truck updates
 					while (!restarted) {
 						tickStart = System.nanoTime();
 						theTruck.updateDesires();
 						theTruck.updatePhysical();
-						while (((System.nanoTime() - tickStart) / 1000000) < (1 / tickRate)) {
+						while (((System.nanoTime() - tickStart) / 1000000000.0) < (1.0 / (double) tickRate)) {
 						}
 					}
 				} finally {
@@ -136,7 +136,8 @@ public class TruckRunner {
 				}
 			} catch (IOException e) {
 				System.out
-						.println("[SEVERE] IOException in thread that handles message handoff." + e);
+						.println("[SEVERE] IOException in thread that handles message handoff."
+								+ e);
 			} catch (NumberFormatException e) {
 				e.printStackTrace();
 			} catch (FatalTruckException e) {
@@ -145,10 +146,9 @@ public class TruckRunner {
 		}
 	}
 
-	private class UIThread extends Thread {
-		private int newLane;
+	private static class UIThread extends Thread {
 		long UITickStart = 0l;
-		int UITickRate = TheAir.TICK_RATE;
+		int UITickRate = 10;
 
 		public UIThread() {
 		}
@@ -170,9 +170,9 @@ public class TruckRunner {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}// for mac
-				// Runtime.getRuntime().exec("cls"); // for windows
+					// Runtime.getRuntime().exec("cls"); // for windows
 
-				while (((System.nanoTime() - UITickStart) / 1000000) < (1 / UITickStart)) {
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (10.0 / (double) UITickRate)) {
 				}
 
 			}

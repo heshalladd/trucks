@@ -119,12 +119,10 @@ public class TheAir {
 				String[] receivedMessage;
 				String receivedMessageWhole = "";
 
-				// TODO:transmit request for status and transmission
 				while (!start) {
-					Thread.sleep(5000);
+					Thread.sleep(100);
 				}
 				if (start) {
-					start = false;
 					System.out.println("[NORMAL] Starting simulation");
 					PrintWriter out = new PrintWriter(new BufferedWriter(
 							new OutputStreamWriter(socket.getOutputStream())),
@@ -137,7 +135,6 @@ public class TheAir {
 				while (true) {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
-					System.out.println("Whole message:" + receivedMessageWhole);
 					receivedMessage = receivedMessageWhole.split(",");
 					// update sourceAddress in message if it was 0 (unset)
 					if (Integer.decode(receivedMessage[1]) == 0) {
@@ -175,7 +172,7 @@ public class TheAir {
 						// add address of truck to air cache of truck addresses
 						// and ports
 						truckAddresses[messageTruckNumber - 1] = socket
-								.getRemoteSocketAddress().toString();
+								.getRemoteSocketAddress().toString().split("/")[1].split(":")[0];
 						// initialize truck for cache
 						theTrucks[messageTruckNumber - 1] = new Truck(
 								messageTruckNumber,
@@ -266,12 +263,14 @@ public class TheAir {
 
 			catch (IOException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
+				e.printStackTrace();
 			} catch (NumberFormatException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
+				e.printStackTrace();
 			} catch (FatalTruckException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
+				e.printStackTrace();
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 
@@ -288,9 +287,8 @@ public class TheAir {
 	}
 
 	private static class UIThread extends Thread {
-		private int newLane;
 		long UITickStart = 0l;
-		int UITickRate = TheAir.TICK_RATE;
+		int UITickRate = 1;
 
 		public UIThread() {
 		}
@@ -331,8 +329,8 @@ public class TheAir {
 				System.out
 						.println("_______________________________________________________");
 				for (Truck truck : truckList) {
-					System.out.print("-  -[" + truck.getTruckNumber() + ":"
-							+ truck.getPos() + "] -   -");
+					System.out.print("-[" + truck.getTruckNumber() + ":"
+							+ truck.getPos() + "]-");
 				}
 				System.out.println();
 				System.out
@@ -360,14 +358,13 @@ public class TheAir {
 					e.printStackTrace();
 				}
 
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				// while (((System.nanoTime() - UITickStart) / 1000000) < (1 /
-				// (UITickStart*10))) {
+				// try {
+				// Thread.sleep(1000);
+				// } catch (InterruptedException e) {
+				// e.printStackTrace();
 				// }
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (10.0 / (double) UITickRate)) {
+				}
 
 			}
 			// TODO: busy wait for ui thread tick to finish

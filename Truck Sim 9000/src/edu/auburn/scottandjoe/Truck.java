@@ -72,7 +72,7 @@ public class Truck {
 
 	// message meta
 	private int sequenceNumber = 1;
-	private int messagesPerSecond = 100;
+	private int messagesPerSecond = 10;
 	private long lastMessageTime = 0l;
 	private static DatagramSocket airUDPSocket;
 
@@ -104,8 +104,8 @@ public class Truck {
 			if (lane > MAX_LANE || lane < MIN_LANE) {
 				System.out.println("[SEVERE] Truck " + truckNumber
 						+ " is off the road!");
-				explode("Truck was initialized in an invalid lane (allowable is "
-						+ MIN_LANE + " to " + MAX_LANE);
+				explode("Truck was initialized in an invalid lane " + lane
+						+ " (allowable is " + MIN_LANE + " to " + MAX_LANE);
 			}
 			this.lane = lane;
 			this.desiredLane = lane;
@@ -151,8 +151,8 @@ public class Truck {
 		}
 
 		if (acceleration != RANDOMIZE_DOUBLE) {
-			if (acceleration > MAX_ACCELERATION
-					|| acceleration < MIN_ACCELERATION) {
+			if (acceleration < MAX_ACCELERATION
+					|| acceleration > MIN_ACCELERATION) {
 				this.acceleration = acceleration;
 				System.out
 						.println("[NORMAL] Truck acceleration initialized to "
@@ -162,7 +162,8 @@ public class Truck {
 						.println("[SEVERE] Truck "
 								+ truckNumber
 								+ "'s engine has "
-								+ "overheated and exploded from excessive acceleration/deceleration.");
+								+ "overheated and exploded from excessive acceleration/deceleration.("
+								+ acceleration + ")");
 				explode("Excessive acceleration/deceleration in initialization (allowable is "
 						+ MIN_ACCELERATION + " to " + MAX_ACCELERATION + ")");
 			}
@@ -180,7 +181,7 @@ public class Truck {
 		if (acceleration <= MAX_ACCELERATION
 				&& acceleration >= MIN_ACCELERATION) {
 			// accelerate relative to tick rate
-			speed = speed + (acceleration / (double) tickRate);
+			this.speed = this.speed + (this.acceleration / (double) tickRate);
 		} else {
 			System.out
 					.println("[SEVERE] Truck "
@@ -199,14 +200,14 @@ public class Truck {
 	// note: update position before acceleration
 	private void updatePosition() {
 		// update truck position relative to speed and tick rate
-		this.pos = this.pos + this.speed / tickRate;
+		this.pos = this.pos + (this.speed / tickRate);
 	}
 
 	// collisions of trucks is a responsibility of the air to decide
 	public int updatePhysical() throws FatalTruckException {
 		// update position
 		updatePosition();
-		// update speed
+		// uncomment update speed
 		accelerate();
 		// update lane
 		if (desiredLane != lane && intentChangeLane && !changingLanes) {
@@ -344,19 +345,20 @@ public class Truck {
 			// in front of it
 			Truck nextTruck = null;
 			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i] && truckNumber - 1 != i
+				if (truckInitialized[i]
+						&& truckNumber - 1 != i
 						&& !truckCache[i].getConvoyID().equals(convoyID)
 						&& truckCache[i].getOrderInConvoy() == orderInConvoy - 1) {
 					nextTruck = truckCache[i];
 					break;
 				}
 			}
-			if(nextTruck != null) {
-				if(nextTruck.getPos() - pos < 13.0) {
+			if (nextTruck != null) {
+				if (nextTruck.getPos() - pos < 13.0) {
 					// once within acceptable range, become a MULTI_CONVOY
 					truckAIState = MULTI_CONVOY;
 				}
-				if(nextTruck.getPos() - pos > 13.0) {
+				if (nextTruck.getPos() - pos > 13.0) {
 					desiredSpeed = MERGING_CATCHING_SPEED;
 				}
 			}
@@ -369,10 +371,30 @@ public class Truck {
 			// TODO: explode appropriately for not being in a recognizeable
 			// state
 		}
-		
-		// TODO: add logic to try to make truck its desired speed by modifying
+
+		// logic to try to make truck its desired speed by modifying
 		// acceleration
-		// TODO: if stabilizing countdown != 0 do stuff to stabilize
+		if (this.speed < this.desiredSpeed) {
+			if (this.acceleration < MAX_ACCELERATION) {
+				if (this.acceleration < 0) {
+					this.acceleration = 0;
+				} else {
+					this.acceleration += 0.1;
+				}
+			}
+		} else {
+			if (this.acceleration > MIN_ACCELERATION + 0.21) {
+				if (this.acceleration > 0) {
+					this.acceleration = 0;
+				} else {
+					this.acceleration -= 0.2;
+				}
+			}
+		}
+		if (this.speed == this.desiredSpeed) {
+			acceleration = 0;
+		}
+
 		// TODO: change lanes if area is clear
 
 	}
@@ -469,7 +491,7 @@ public class Truck {
 		}
 
 		// check if it is time to send a message about this truck
-		if (((System.nanoTime() - lastMessageTime) / 1000000) > (1 / messagesPerSecond)) {
+		if (((System.nanoTime() - lastMessageTime) / 1000000000.0) > (1.0 / (double) messagesPerSecond)) {
 			// create a message
 			outBoundMessages.add(createCSVMessage(truckNumber,
 					airUDPSocket.getPort(), "0"));
@@ -609,7 +631,8 @@ public class Truck {
 					DatagramPacket receivedPacket = new DatagramPacket(
 							receivedData, receivedData.length);
 					airUDPSocket.receive(receivedPacket);
-					System.out.println("[NORMAL] Received packet:" + new String(receivedPacket.getData()));
+					System.out.println("[NORMAL] Received packet:"
+							+ new String(receivedPacket.getData()));
 					incomingUDPMessages
 							.add(new String(receivedPacket.getData())
 									.split("\n")[0]);
