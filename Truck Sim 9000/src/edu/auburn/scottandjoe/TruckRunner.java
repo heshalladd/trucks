@@ -11,6 +11,8 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 
 public class TruckRunner {
@@ -89,6 +91,7 @@ public class TruckRunner {
 		}
 	}
 
+	
 	private static class CrashListener extends Thread {
 		private Socket airSocket;
 
@@ -174,6 +177,27 @@ public class TruckRunner {
 			AIMap.put(7, "MERGING_CONVOY");
 			DecimalFormat df = new DecimalFormat("#0.00");
 			while (true) {
+				ArrayList<Truck> truckList = new ArrayList<Truck>();
+				for (int i = 0; i < theTruck.getTruckInitialized().length; i++) {
+					if (theTruck.getTruckInitialized()[i]) { // make sure you only display
+												// trucks that have been
+												// initialized
+						truckList.add(theTruck.getTruckCache()[i]);
+					}
+				}
+				//add self
+				truckList.add(theTruck);
+
+				// Sort trucks based on position
+				Collections.sort(truckList, new Comparator<Truck>() {
+					public int compare(Truck t1, Truck t2) {
+						if (t1.getPos() == t2.getPos())
+							return 0;
+						return t1.getPos() < t2.getPos() ? -1 : 1;
+					}
+				});
+				
+				
 				// Clear Console on Linux
 				final String ANSI_CLS = "\u001b[2J";
 				final String ANSI_HOME = "\u001b[H";
@@ -185,7 +209,7 @@ public class TruckRunner {
 				System.out.println("Truck:         " + theTruck.getTruckNumber());
 				System.out.println("Pos:           " + df.format(theTruck.getPos()));
 				System.out.println("Next Trk Pos:  " + df.format(theTruck.getNextTruckPos()));
-				System.out.println("next Trk Dist: " + df.format(theTruck.getNextTruckPos() - theTruck.getPos()));
+				System.out.println("next Trk Dist: " + df.format(theTruck.getNextTruckPos() - theTruck.getPos() - 25));
 				System.out.println("Speed          "
 						+ df.format(theTruck.getSpeed()));
 				System.out.println("Accel:         "
@@ -193,10 +217,41 @@ public class TruckRunner {
 				System.out.println("Lane:          " + theTruck.getLane());
 				System.out.println("ConvoyID:      " + theTruck.getConvoyID());
 				System.out.println("Order:         " + theTruck.getOrderInConvoy());
+				System.out.println("Convoy Size:   " + theTruck.getConvoySize());
 				System.out.println("AIState:       "
 						+ AIMap.get(theTruck.getTruckAIState()));
 				System.out.println("Am I 1st?:     " + theTruck.getProbablyFirst());
+				System.out.println("Msgs Forwarded:" + theTruck.getMessagesForwarded() + "  Messages Dropped:" + theTruck.getMessagesDropped());
 				System.out.println("===========================");
+				
+				
+				//debug
+				System.out.println("Last Forwarded Message:" + theTruck.getLastMessageToForward());
+				
+				// Print RoadView
+				System.out.println("ROAD VIEW FROM THIS TRUCKS PERSPECTIVE");
+				System.out
+						.println("_______________________________________________________");
+				for (Truck truck : truckList) {
+					System.out.print("-[" + truck.getTruckNumber() + ":"
+							+ df.format(truck.getPos()) + "]-");
+				}
+				System.out.println();
+				System.out
+						.println("_______________________________________________________");
+				
+				// Display truck info (position, speed, acceleration, lane,
+				// total messages)
+				System.out
+						.println("TRUCK     POS            SPEED      ACC      LANE");
+				for (Truck truck : truckList) {
+					System.out.println("  " + truck.getTruckNumber()
+							+ "       " + df.format(truck.getPos())
+							+ "        " + df.format(truck.getSpeed())
+							+ "       " + df.format(truck.getAcceleration())
+							+ "        " + truck.getLane());
+				}
+				
 
 				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
 				}

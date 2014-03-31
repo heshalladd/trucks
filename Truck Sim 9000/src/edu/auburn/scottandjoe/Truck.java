@@ -47,10 +47,10 @@ public class Truck {
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
-	private static final double CATCHING_SPEED = 31.4;
-	private static final double SOLO_CATCHING_SPEED = 31.4;
-	private static final double MERGING_CATCHING_SPEED = 31.4;
-	private static final double MULTI_CATCHING_SPEED = 31.4;
+	private static final double CATCHING_SPEED = 31.5;
+	private static final double SOLO_CATCHING_SPEED = 31.5;
+	private static final double MERGING_CATCHING_SPEED = 31.5;
+	private static final double MULTI_CATCHING_SPEED = 31.5;
 	private static final double MIN_CONVOY_GAP = 15.0;
 	private static final double MAX_CONVOY_GAP = 25.0;
 
@@ -63,9 +63,12 @@ public class Truck {
 	private int orderInConvoy = 1; // 1 will signify leader of convoy
 	private int truckAIState = NEW_TRUCK;
 	private int stabilizingCountdown = 0;
+	private int messagesForwarded = 0;
+	private int messagesDropped = 0;
 	private double desiredSpeed;
 	private double startPos;
 	private String convoyID = UUID.randomUUID().toString(); // id of convoy
+	private String lastMessageToForward = "";
 	private static ConcurrentLinkedQueue<String> incomingUDPMessages = new ConcurrentLinkedQueue<String>();
 	private boolean changingLanes = false;
 	private boolean probablyFirst = false;
@@ -146,6 +149,8 @@ public class Truck {
 				this.speed = mean + std * rand.nextGaussian();
 				tries++;
 			}
+			//debug
+			//this.speed = 31.3;
 			System.out.println("[NORMAL] Truck speed randomly initialized to "
 					+ this.speed + " after " + tries + " tries.");
 		}
@@ -238,15 +243,14 @@ public class Truck {
 			// set desired speed to stabilizing speed
 			desiredSpeed = STABILIZING_SPEED;
 			// start stabilizing countdown timer using tick rate for reference
-			stabilizingCountdown = (int) (tickRate
-					* Math.ceil(Math.max(MAX_REASONABLE_SPEED
-							- STABILIZING_SPEED, STABILIZING_SPEED
+			stabilizingCountdown = (int) (tickRate * Math.ceil(Math.max(
+					MAX_REASONABLE_SPEED - STABILIZING_SPEED, STABILIZING_SPEED
 							- MIN_REASONABLE_SPEED)
-							/ Math.min(MAX_ACCELERATION, MIN_ACCELERATION)));
-			
-			//!debug set stabilizing countdown to what it should be
+					/ Math.min(MAX_ACCELERATION, MIN_ACCELERATION)));
+
+			// !debug set stabilizing countdown to what it should be
 			stabilizingCountdown = 67;
-			
+
 			// move to next state
 			truckAIState = STABILIZING;
 			break;
@@ -261,13 +265,18 @@ public class Truck {
 
 		case STABILIZED:
 			// // become a solo convoy and move over to lane 1
-			//desiredLane = 1;
+			// desiredLane = 1;
 			truckAIState = SOLO_CONVOY;
 			// NOTE: this state is here in case something else needs to happen
 			// when tweaking AI code
 			break;
 
 		case SOLO_CONVOY:
+			// if there is a truck in this convoy with position 5, become full
+			// convoy
+			if (getConvoySize() == 5) {
+				truckAIState = FULL_CONVOY;
+			}
 			// search for a truck ahead
 			for (int i = 0; i < truckCache.length; i++) {
 				// NOTE: this biases forward merging
@@ -291,19 +300,14 @@ public class Truck {
 			if (!probablyFirst) {
 				desiredSpeed = SOLO_CATCHING_SPEED;
 			}
-			// if there is a truck in this convoy with position 5, become full
-			// convoy
-			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i] && truckNumber - 1 != i
-						&& !truckCache[i].getConvoyID().equals(convoyID)
-						&& truckCache[i].getOrderInConvoy() == 5) {
-					truckAIState = FULL_CONVOY;
-					break;
-				}
-			}
 			break;
 
 		case MULTI_CONVOY:
+			// if there is a truck in this convoy with position 5, become full
+			// convoy
+			if (getConvoySize() == 5) {
+				truckAIState = FULL_CONVOY;
+			}
 			// if the leader of the convoy isn't the first truck,
 			// accelerate while maintaining distance
 			for (int i = 0; i < truckCache.length; i++) {
@@ -321,22 +325,14 @@ public class Truck {
 			// convoy and become solo for a tick)
 			for (int i = 0; i < truckCache.length; i++) {
 				// NOTE: this biases forward merging
-				if (truckInitialized[i] && truckNumber - 1 != i
+				if (truckInitialized[i]
+						&& truckNumber - 1 != i
 						&& truckCache[i].getPos() > pos
 						&& !truckCache[i].getConvoyID().equals(convoyID)
-						&& truckCache[i].getPos() - pos > MAX_CONVOY_GAP + truckLength
+						&& truckCache[i].getPos() - pos > MAX_CONVOY_GAP
+								+ truckLength
 						&& truckCache[i].getLane() == lane) {
 					truckAIState = SOLO_CONVOY;
-					break;
-				}
-			}
-			// if there is a truck in this convoy with position 5, become full
-			// convoy
-			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i] && truckNumber - 1 != i
-						&& !truckCache[i].getConvoyID().equals(convoyID)
-						&& truckCache[i].getOrderInConvoy() == 5) {
-					truckAIState = FULL_CONVOY;
 					break;
 				}
 			}
@@ -347,17 +343,23 @@ public class Truck {
 			break;
 
 		case MERGING_CONVOY:
-			//  try to close the gap to an acceptable range with the truck
+			// if there is a truck in this convoy with position 5, become full
+			// convoy
+			if (getConvoySize() == 5) {
+				truckAIState = FULL_CONVOY;
+			}
+
+			// try to close the gap to an acceptable range with the truck
 			// in front of it
+			Truck[] truckCacheFreeze = truckCache.clone();
 			Truck nextTruck = null;
 			double nextTruckPos = 999999.0;
-			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i]
-						&& truckNumber - 1 != i
-						&& truckCache[i].getPos() < nextTruckPos
-						&& truckCache[i].getPos() > pos) {
-					nextTruck = truckCache[i];
-					nextTruckPos = truckCache[i].getPos();
+			for (int i = 0; i < truckCacheFreeze.length; i++) {
+				if (truckInitialized[i] && truckNumber - 1 != i
+						&& truckCacheFreeze[i].getPos() < nextTruckPos
+						&& truckCacheFreeze[i].getPos() > pos) {
+					nextTruck = truckCacheFreeze[i];
+					nextTruckPos = truckCacheFreeze[i].getPos();
 					break;
 				}
 			}
@@ -370,43 +372,41 @@ public class Truck {
 					desiredSpeed = STABILIZING_SPEED;
 				}
 			}
-			// if there is a truck in this convoy with position 5, become full
-						// convoy
-						for (int i = 0; i < truckCache.length; i++) {
-							if (truckInitialized[i] && truckNumber - 1 != i
-									&& !truckCache[i].getConvoyID().equals(convoyID)
-									&& truckCache[i].getOrderInConvoy() == 5) {
-								truckAIState = FULL_CONVOY;
-								break;
-							}
-						}
 			break;
 
 		default:
 			break;
 		}
 
-		//logic to try to maintain a gap
+		// logic to try to maintain a gap
+		Truck[] truckCacheFreeze = truckCache.clone();
 		Truck nextTruck = null;
 		double nextTruckPos = 999999.0;
-		for (int i = 0; i < truckCache.length; i++) {
-			if (truckInitialized[i]
-					&& truckNumber - 1 != i
-					&& truckCache[i].getPos() < nextTruckPos
-					&& truckCache[i].getPos() > pos) {
-				nextTruck = truckCache[i];
-				nextTruckPos = truckCache[i].getPos();
+		for (int i = 0; i < truckCacheFreeze.length; i++) {
+			if (truckInitialized[i] && truckNumber - 1 != i
+					&& truckCacheFreeze[i].getPos() < nextTruckPos
+					&& truckCacheFreeze[i].getPos() > pos) {
+				nextTruck = truckCacheFreeze[i];
+				nextTruckPos = truckCacheFreeze[i].getPos();
 				break;
 			}
 		}
-		if (nextTruck != null && nextTruck.getPos() - pos < MIN_CONVOY_GAP + truckLength) {
-			desiredSpeed = desiredSpeed - 0.5;
+		if (nextTruck != null
+				&& nextTruck.getPos() - pos < MIN_CONVOY_GAP + truckLength
+				&& desiredSpeed > MIN_REASONABLE_SPEED) {
+			desiredSpeed = desiredSpeed - 0.15;
 		}
-		if (nextTruck != null && nextTruck.getPos() - pos > MAX_CONVOY_GAP + truckLength && desiredSpeed < CATCHING_SPEED) {
+		if (nextTruck != null
+				&& nextTruck.getPos() - pos > MAX_CONVOY_GAP + truckLength
+				&& desiredSpeed < CATCHING_SPEED) {
 			desiredSpeed = desiredSpeed + 0.05;
 		}
-		if(nextTruck != null && nextTruck.getPos() - pos < 40)
-		{
+		if (nextTruck != null
+				&& nextTruck.getPos() - pos > MIN_CONVOY_GAP + truckLength
+				&& nextTruck.getPos() - pos < MAX_CONVOY_GAP + truckLength) {
+			desiredSpeed = STABILIZING_SPEED;
+		}
+		if (nextTruck != null && nextTruck.getPos() - pos < 40) {
 			convoyID = nextTruck.getConvoyID();
 			orderInConvoy = nextTruck.getOrderInConvoy() + 1;
 		}
@@ -425,15 +425,45 @@ public class Truck {
 				if (this.acceleration > 0) {
 					this.acceleration = 0;
 				} else {
-					this.acceleration -= 0.1;
+					this.acceleration -= 0.03;
 				}
 			}
 		}
 		if (this.speed == this.desiredSpeed) {
 			acceleration = 0;
 		}
-		
-		// TODO: change lanes if area is clear
+
+		// check for collision
+		for (int j = 0; j < truckCache.length - 1; j++) {
+			for (int i = 0; i < truckCache.length; i++) {
+				if (truckInitialized[i] && truckInitialized[j]
+						&& j != i) {
+					if (truckCache[j].getPos() > truckCache[i]
+							.getPos()) {
+						if (truckCache[j].getPos() - 25 > truckCache[i]
+								.getPos()) {
+							// we're good
+						} else {
+							System.out.println("[COLLISION] Truck "
+									+ (j + 1) + " ran into  Truck " + (i + 1)
+									+ "!");
+							truckCache[j].explode("COLLISION! BOOOM!");
+						}
+					} else if (truckCache[j].getPos() < truckCache[i]
+							.getPos()) {
+						if (truckCache[j].getPos() < truckCache[i]
+								.getPos() - 25) {
+							// we're good
+						} else {
+							System.out.println("[COLLISION] Truck "
+									+ (i + 1) + " ran into  Truck " + (j + 1)
+									+ "!");
+							truckCache[j].explode("COLLISION! BOOOM!");
+						}
+					}
+				}
+			}
+		}
 
 	}
 
@@ -495,10 +525,12 @@ public class Truck {
 
 		if (!incomingUDPMessages.isEmpty()) {
 			String[] messageToProcess;
+			String messageToProcessWhole;
 			String tempMessage = "";
 
 			while (!incomingUDPMessages.isEmpty()) {
-				messageToProcess = incomingUDPMessages.remove().split(",");
+				messageToProcessWhole = incomingUDPMessages.remove();
+				messageToProcess = messageToProcessWhole.split(",");
 
 				// determine if message is new
 				int messageTruckNumber = Integer.decode(messageToProcess[7]);
@@ -513,8 +545,14 @@ public class Truck {
 						probablyFirst = false;
 					}
 
+					
+					
 					// update previous hop
 					messageToProcess[3] = "" + truckNumber;
+					if(Integer.decode(messageToProcess[3]) != messageTruckNumber) {
+						messagesForwarded = messageToProcess.length;
+						lastMessageToForward = messageToProcessWhole;
+					}
 					// return a string message to send to the air
 					for (int i = 0; i < messageToProcess.length; i++) {
 						tempMessage += messageToProcess[i];
@@ -522,8 +560,12 @@ public class Truck {
 							tempMessage += ",";
 						}
 					}
+					
 					outBoundMessages.add(tempMessage);
 
+				}
+				else {
+					messagesDropped++;
 				}
 			}
 		}
@@ -543,9 +585,8 @@ public class Truck {
 	public String createCSVMessage(int previousHop, int sourcePort,
 			String sourceAddress) {
 		String message = "" + sequenceNumber + "," + sourceAddress + ","
-				+ sourcePort + "," + previousHop + ","
-				+ acceleration + "," + pos + ","
-				+ speed + "," + truckNumber + "," + lane + ","
+				+ sourcePort + "," + previousHop + "," + acceleration + ","
+				+ pos + "," + speed + "," + truckNumber + "," + lane + ","
 				+ desiredLane + "," + desiredPlaceInConvoy + "," + convoyID
 				+ "," + orderInConvoy + "," + probablyFirst;
 		sequenceNumber++;
@@ -572,36 +613,64 @@ public class Truck {
 	public int getOrderInConvoy() {
 		return orderInConvoy;
 	}
-	
-	public double getNextTruckPos()
+
+	public int getMessagesForwarded()
 	{
+		return messagesForwarded;
+	}
+	
+	public int getMessagesDropped()
+	{
+		return messagesDropped;
+	}
+	
+	public double getNextTruckPos() {
 		Truck nextTruck = null;
+		Truck[] truckCacheLocal = truckCache.clone();
 		double nextTruckPos = 999999.0;
-		for (int i = 0; i < truckCache.length; i++) {
-			if (truckInitialized[i]
-					&& truckNumber - 1 != i
-					&& truckCache[i].getPos() < nextTruckPos
-					&& truckCache[i].getPos() > pos) {
-				nextTruck = truckCache[i];
-				nextTruckPos = truckCache[i].getPos();
+		for (int i = 0; i < truckCacheLocal.length; i++) {
+			if (truckInitialized[i] && truckNumber - 1 != i
+					&& truckCacheLocal[i].getPos() < nextTruckPos
+					&& truckCacheLocal[i].getPos() > pos) {
+				nextTruck = truckCacheLocal[i];
+				nextTruckPos = truckCacheLocal[i].getPos();
 				break;
 			}
 		}
-		if(nextTruck == null){
+		if (nextTruck == null) {
 			return 0;
 		} else {
 			return nextTruckPos;
 		}
 	}
-	
-	public Truck[] getTruckCache()
+
+	public int getConvoySize() {
+		int size = orderInConvoy;
+		for (int i = 0; i < truckCache.length; i++) {
+			if (truckInitialized[i] && truckCache[i].getOrderInConvoy() > size) {
+				size = truckCache[i].getOrderInConvoy();
+			}
+		}
+		return size;
+	}
+
+	public String getLastMessageToForward()
 	{
-		return truckCache;
+		return lastMessageToForward;
 	}
 	
+	public Truck[] getTruckCache() {
+		return truckCache;
+	}
+
+	public boolean[] getTruckInitialized() {
+		return truckInitialized;
+	}
+
 	public int getTruckAIState() {
 		return this.truckAIState;
 	}
+
 	// set messages per second
 	public void setMPS(int mps) {
 		this.messagesPerSecond = mps;
@@ -696,8 +765,8 @@ public class Truck {
 					DatagramPacket receivedPacket = new DatagramPacket(
 							receivedData, receivedData.length);
 					airUDPSocket.receive(receivedPacket);
-					//System.out.println("[NORMAL] Received packet:"
-					//		+ new String(receivedPacket.getData()));
+					// System.out.println("[NORMAL] Received packet:"
+					// + new String(receivedPacket.getData()));
 					incomingUDPMessages
 							.add(new String(receivedPacket.getData())
 									.split("\n")[0]);

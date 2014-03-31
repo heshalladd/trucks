@@ -26,8 +26,12 @@ public class TheAir {
 	public static Truck[] theTrucks = new Truck[5];
 	public static int totalTrucks = 0;
 	public static int[] totalMessages = new int[5];
+	public static int sequenceCache[] = new int[5];
+	public static int totalMalformedPackets = 0;
 	public static int port;
+	public static int totalForwardedPackets = 0;
 	public static String[] truckAddresses = new String[5];
+	public static String lastMalformedPacket = "";
 	public static boolean start = false;
 	public static boolean collision = false;
 	public static boolean[] truckInitialized = new boolean[5]; // will
@@ -133,10 +137,14 @@ public class TheAir {
 					}
 
 					// retrieve message from the client
+					receivedMessageWhole = "";
+					receivedMessage = new String[14];
 					receivedMessageWhole = in.readLine();
 					receivedMessage = receivedMessageWhole.split(",");
 					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
 					int messageTruckNumber = 0;
+					int messageSequenceNumber = 0;
+					int previousHop = 0;
 
 					// scrape truck data for air cache
 					if (receivedMessage.length == 14) {
@@ -147,9 +155,15 @@ public class TheAir {
 									.split("/")[1].split(":")[0];
 						}
 						messageTruckNumber = Integer.decode(receivedMessage[7]);
-						totalMessages[messageTruckNumber - 1]++;
+						messageSequenceNumber = Integer.decode(receivedMessage[0]);
+						previousHop = Integer.decode(receivedMessage[3]);
+						if(previousHop != messageTruckNumber){
+							totalForwardedPackets++;
+						}
+						totalMessages[previousHop - 1]++;
 						if (truckInitialized[messageTruckNumber - 1]
-								&& receivedMessage.length == 14) {
+								&& receivedMessage.length >= 14 && sequenceCache[messageTruckNumber - 1] < messageSequenceNumber) {
+							sequenceCache[messageTruckNumber - 1] = messageSequenceNumber;
 							theTrucks[messageTruckNumber - 1]
 									.setSequenceNumber(Integer
 											.decode(receivedMessage[0]));
@@ -173,7 +187,7 @@ public class TheAir {
 							theTrucks[messageTruckNumber - 1]
 									.setOrderInConvoy(Integer
 											.decode(receivedMessage[12]));
-						} else if (receivedMessage.length == 14) {
+						} else {
 							// add address of truck to air cache of truck
 							// addresses
 							// and ports
@@ -207,13 +221,14 @@ public class TheAir {
 
 						// determine who the broadcast is in range of
 						for (int i = 0; i < theTrucks.length; i++) {
-							if (i != messageTruckNumber - 1
-									&& truckInitialized[i]
-									&& Math.abs(theTrucks[messageTruckNumber - 1]
-											.getPos() - theTrucks[i].getPos()) < 100) {
+							if (i != previousHop - 1
+									&& truckInitialized[i]) {
 								trucksInRange.add(theTrucks[i]);
 							}
 						}
+					} else {
+						totalMalformedPackets++;
+						lastMalformedPacket = receivedMessageWhole;
 					}
 					// determine whether those messages are going to make it
 					// through
@@ -278,8 +293,7 @@ public class TheAir {
 										System.out.println("[COLLISION] Truck "
 												+ (j + 1) + " ran into  Truck " + (i + 1)
 												+ "!");
-										theTrucks[j]
-												.explode("COLLISION! BOOOM!");
+										theTrucks[j].explode("COLLISION! BOOOM!");
 									}
 								} else if (theTrucks[j].getPos() < theTrucks[i]
 										.getPos()) {
@@ -290,8 +304,7 @@ public class TheAir {
 										System.out.println("[COLLISION] Truck "
 												+ (i + 1) + " ran into  Truck " + (j + 1)
 												+ "!");
-										theTrucks[j]
-												.explode("COLLISION! BOOOM!");
+										theTrucks[j].explode("COLLISION! BOOOM!");
 									}
 								}
 							}
@@ -401,15 +414,19 @@ public class TheAir {
 				// Display truck info (position, speed, acceleration, lane,
 				// total messages)
 				System.out
-						.println("TRUCK     POS            SPEED      ACC      LANE");
+						.println("TRUCK     POS            SPEED      ACC      LANE         TOTAL MESSAGES");
 				for (Truck truck : truckList) {
 					System.out.println("  " + truck.getTruckNumber()
 							+ "       " + df.format(truck.getPos())
 							+ "        " + df.format(truck.getSpeed())
 							+ "       " + df.format(truck.getAcceleration())
-							+ "        " + truck.getLane());
+							+ "        " + truck.getLane()
+							+ "           " + totalMessages[truck.getTruckNumber() - 1]);
 				}
 				System.out.println("=======================================================");
+				System.out.println("Total Forwarded Packets:  " + totalForwardedPackets);
+				System.out.println("Total Malformed Packets:  " + totalMalformedPackets);
+				System.out.println("Last Malformed Packet:" + lastMalformedPacket);
 				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (1.0 / (double) UITickRate)) {
 				}
 
