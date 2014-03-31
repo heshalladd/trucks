@@ -136,10 +136,14 @@ public class TheAir {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
 					receivedMessage = receivedMessageWhole.split(",");
+					//System.out.println("[DEBUG] Whole Message:" + receivedMessageWhole);
+					//for(int i = 0; i < receivedMessage.length; i++) {
+					//	System.out.println("[DEBUG]" + receivedMessage[i]);
+					//}
 					// update sourceAddress in message if it was 0 (unset)
 					if (Integer.decode(receivedMessage[1]) == 0) {
 						receivedMessage[1] = socket.getRemoteSocketAddress()
-								.toString();
+								.toString().split("/")[1].split(":")[0];
 					}
 					// scrape truck data for air cache
 					int messageTruckNumber = Integer.decode(receivedMessage[7]);
@@ -306,6 +310,10 @@ public class TheAir {
 			// 5 550 66 4 1
 
 			while (true) {
+				final String ANSI_CLS = "\u001b[2J"; 
+				final String ANSI_HOME = "\u001b[H"; 
+				System.out.print(ANSI_CLS + ANSI_HOME); 
+				System.out.flush();
 				UITickStart = System.nanoTime();
 				// Prepare the ArrayList for sorting
 				ArrayList<Truck> truckList = new ArrayList<Truck>();
@@ -349,21 +357,7 @@ public class TheAir {
 								+ "        " + theTrucks[i].getLane());
 					}
 				}
-
-				// Clear the console (may be different depending on OS)
-				try {
-					Runtime.getRuntime().exec("clear");// for mac
-					// Runtime.getRuntime().exec("cls"); // for windows
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-
-				// try {
-				// Thread.sleep(1000);
-				// } catch (InterruptedException e) {
-				// e.printStackTrace();
-				// }
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (10.0 / (double) UITickRate)) {
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
 				}
 
 			}

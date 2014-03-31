@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.util.Locale;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -375,7 +377,7 @@ public class Truck {
 		// logic to try to make truck its desired speed by modifying
 		// acceleration
 		if (this.speed < this.desiredSpeed) {
-			if (this.acceleration < MAX_ACCELERATION) {
+			if (this.acceleration < MAX_ACCELERATION - 0.11) {
 				if (this.acceleration < 0) {
 					this.acceleration = 0;
 				} else {
@@ -394,6 +396,29 @@ public class Truck {
 		if (this.speed == this.desiredSpeed) {
 			acceleration = 0;
 		}
+		
+		//check for collision
+		for (int i = 0; i < truckCache.length; i++) {
+            if (truckInitialized[i] && truckNumber - 1 != i){
+              	if(this.pos > truckCache[i].pos){ //if front is greater than front of other truck
+              		if(this.pos - 25 > truckCache[i].pos){ // then make sure the rear is also greater than the front of other truck
+              			//we're good
+              		}
+              		else{
+              			//CRASH!!!
+              		}
+              	}
+              	else if(this.pos < truckCache[i].pos)// else if the front is less then the front of the other truck
+              		if(this.pos < truckCache[i].pos - 25){ // then make sure its front is less then the rear of the other truck
+              			//we're good
+              		}
+              		else{
+              			//CRASH!!!
+              		}
+				}
+			}
+		
+		
 
 		// TODO: change lanes if area is clear
 
@@ -494,7 +519,7 @@ public class Truck {
 		if (((System.nanoTime() - lastMessageTime) / 1000000000.0) > (1.0 / (double) messagesPerSecond)) {
 			// create a message
 			outBoundMessages.add(createCSVMessage(truckNumber,
-					airUDPSocket.getPort(), "0"));
+					airUDPSocket.getPort(), new String("0")));
 			// update last message time
 			lastMessageTime = System.nanoTime();
 		}
@@ -504,12 +529,10 @@ public class Truck {
 
 	public String createCSVMessage(int previousHop, int sourcePort,
 			String sourceAddress) {
-
-		DecimalFormat df = new DecimalFormat("#.0000");
 		String message = "" + sequenceNumber + "," + sourceAddress + ","
 				+ sourcePort + "," + previousHop + ","
-				+ df.format(acceleration) + "," + df.format(pos) + ","
-				+ df.format(speed) + "," + truckNumber + "," + lane + ","
+				+ acceleration + "," + pos + ","
+				+ speed + "," + truckNumber + "," + lane + ","
 				+ desiredLane + "," + desiredPlaceInConvoy + "," + convoyID
 				+ "," + orderInConvoy + "," + probablyFirst;
 		sequenceNumber++;

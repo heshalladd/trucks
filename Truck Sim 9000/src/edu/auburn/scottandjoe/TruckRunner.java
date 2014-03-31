@@ -155,24 +155,21 @@ public class TruckRunner {
 
 		public void run() {
 			while (true) {
+				//Clear Console on Linux
+				final String ANSI_CLS = "\u001b[2J"; 
+				final String ANSI_HOME = "\u001b[H"; 
+				System.out.print(ANSI_CLS + ANSI_HOME); 
+				System.out.flush();
+				
 				UITickStart = System.nanoTime();
-				System.out.println("TRUCK     POS     SPEED     ACC     LANE");
-				System.out.println("  " + theTruck.getTruckNumber() + "       "
-						+ theTruck.getPos() + "        " + theTruck.getSpeed()
-						+ "       " + theTruck.getAcceleration() + "        "
-						+ theTruck.getLane());
-
-				// Clear the console (may be different depending on OS)
-
-				try {
-					Runtime.getRuntime().exec("clear");
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}// for mac
-					// Runtime.getRuntime().exec("cls"); // for windows
-
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (10.0 / (double) UITickRate)) {
+				System.out.println("===============");
+				System.out.println("Truck: " + theTruck.getTruckNumber());
+				System.out.println("Pos:   " + theTruck.getPos());
+				System.out.println("Accel: " + theTruck.getAcceleration());
+				System.out.println("Lane:  " + theTruck.getLane());
+				System.out.println("===============");
+				
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
 				}
 
 			}
