@@ -122,6 +122,11 @@ public class TheAir {
 				while (true) {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
+					//somehow comes out null everytime. WOOHOO
+					if(receivedMessageWhole == null) {
+						receivedMessageWhole = "came out null";
+					}
+					System.out.println(receivedMessageWhole);
 					receivedMessage = receivedMessageWhole.split(",");
 					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
 					int messageTruckNumber = 0;
@@ -130,14 +135,13 @@ public class TheAir {
 					// for(int i = 0; i < receivedMessage.length; i++) {
 					// System.out.println("[DEBUG]" + receivedMessage[i]);
 					// }
-					// update sourceAddress in message if it was 0 (unset)
-					if (Integer.decode(receivedMessage[1]) == 0) {
-						receivedMessage[1] = socket.getRemoteSocketAddress()
-								.toString().split("/")[1].split(":")[0];
-					}
-
 					// scrape truck data for air cache
 					if (receivedMessage.length == 14) {
+						// update sourceAddress in message if it was 0 (unset)
+						if (Integer.decode(receivedMessage[1]) == 0) {
+							receivedMessage[1] = socket.getRemoteSocketAddress()
+									.toString().split("/")[1].split(":")[0];
+						}
 						messageTruckNumber = Integer.decode(receivedMessage[7]);
 						totalMessages[messageTruckNumber - 1]++;
 						if (truckInitialized[messageTruckNumber - 1]
@@ -350,7 +354,9 @@ public class TheAir {
 							+ "       " + df.format(truck.getAcceleration())
 							+ "        " + truck.getLane());
 				}
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (1.0 / (double) UITickRate)) {
+				
+				//debug 1.0 to 999999
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (999999.0 / (double) UITickRate)) {
 				}
 
 			}

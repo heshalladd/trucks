@@ -186,8 +186,7 @@ public class TruckRunner {
 		        System.out.println("Maybe 1st? " + theTruck.getProbablyFirst());
 				System.out.println("===============");
 				
-				//debug 2.0 to 9999999
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (999999.0 / (double) UITickRate)) {
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
 				}
 
 			}
