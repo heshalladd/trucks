@@ -304,13 +304,14 @@ public class TheAir {
 
 				//Print RoadView
 				System.out
-						.print("_______________________________________________________");
+						.println("_______________________________________________________");
 				for (Truck truck : truckList) {
 					System.out.print("-  -[" + truck.getTruckNumber() + ":"
 							+ truck.getPos() + "] -   -");
 				}
+				System.out.println();
 				System.out
-						.print("_______________________________________________________");
+						.println("_______________________________________________________");
 
 				
 				//Display truck info (position, speed, acceleration, lane, total messages)
@@ -327,7 +328,7 @@ public class TheAir {
 				
 				//Clear the console (may be different depending on OS)
 				try {
-					Runtime.getRuntime().exec("clear");// for mac 
+					Runtime.getRuntime().exec("cls");// for mac 
 					// Runtime.getRuntime().exec("cls"); // for windows
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -340,7 +341,7 @@ public class TheAir {
 			// TODO: busy wait for ui thread tick to finish
 
 			
-
+			// merge test
 		}
 	}
 }
