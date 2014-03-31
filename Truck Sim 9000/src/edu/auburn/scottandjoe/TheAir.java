@@ -33,15 +33,12 @@ public class TheAir {
 																// false
 																// (desired)
 
-		
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		System.out.println("[NORMAL] Launching \"The Air\"");
-		
 
-		
 		port = 0;
 		if (args.length == 0) {
 			System.out
@@ -75,9 +72,9 @@ public class TheAir {
 
 					new MessageHandler(server.accept()).start();
 					totalTrucks++;
-					System.out.println("[NORMAL] " + totalTrucks + " trucks connected.");
-					if(totalTrucks == 5)
-					{
+					System.out.println("[NORMAL] " + totalTrucks
+							+ " trucks connected.");
+					if (totalTrucks == 5) {
 						start = true;
 					}
 				}
@@ -121,22 +118,26 @@ public class TheAir {
 						socket.getInputStream()));
 				String[] receivedMessage;
 				String receivedMessageWhole = "";
-				
+
 				// TODO:transmit request for status and transmission
-				while(!start){
-					Thread.sleep(2000);
+				while (!start) {
+					Thread.sleep(5000);
 				}
-				System.out.println("[NORMAL] Starting simulation");
-				PrintWriter out = new PrintWriter(new BufferedWriter(
-						new OutputStreamWriter(socket.getOutputStream())),
-						true);
-				out.println("start");
+				if (start) {
+					start = false;
+					System.out.println("[NORMAL] Starting simulation");
+					PrintWriter out = new PrintWriter(new BufferedWriter(
+							new OutputStreamWriter(socket.getOutputStream())),
+							true);
+					out.println("start");
+				}
 				// spawn ui thread (for displaying stuff)
 				new UIThread().start();
-				
+
 				while (true) {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
+					System.out.println("Whole message:" + receivedMessageWhole);
 					receivedMessage = receivedMessageWhole.split(",");
 					// update sourceAddress in message if it was 0 (unset)
 					if (Integer.decode(receivedMessage[1]) == 0) {
@@ -265,11 +266,9 @@ public class TheAir {
 
 			catch (IOException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
-			}
-			catch (NumberFormatException e) {
+			} catch (NumberFormatException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
-			}
-			catch (FatalTruckException e) {
+			} catch (FatalTruckException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
@@ -292,8 +291,7 @@ public class TheAir {
 		private int newLane;
 		long UITickStart = 0l;
 		int UITickRate = TheAir.TICK_RATE;
-		
-		
+
 		public UIThread() {
 		}
 
@@ -308,18 +306,19 @@ public class TheAir {
 			// 3 390 22 3 1
 			// 4 440 55 2 1
 			// 5 550 66 4 1
-			
+
 			while (true) {
 				UITickStart = System.nanoTime();
-				//Prepare the ArrayList for sorting
+				// Prepare the ArrayList for sorting
 				ArrayList<Truck> truckList = new ArrayList<Truck>();
 				for (int i = 0; i < totalTrucks; i++) {
-					if (truckInitialized[i]) { 			// make sure you only display trucks that have been
+					if (truckInitialized[i]) { // make sure you only display
+												// trucks that have been
 						truckList.add(theTrucks[i]);
 					}
 				}
 
-				//Sort trucks based on position
+				// Sort trucks based on position
 				Collections.sort(truckList, new Comparator<Truck>() {
 					public int compare(Truck t1, Truck t2) {
 						if (t1.getPos() == t2.getPos())
@@ -328,7 +327,7 @@ public class TheAir {
 					}
 				});
 
-				//Print RoadView
+				// Print RoadView
 				System.out
 						.println("_______________________________________________________");
 				for (Truck truck : truckList) {
@@ -339,11 +338,12 @@ public class TheAir {
 				System.out
 						.println("_______________________________________________________");
 
-				
-				//Display truck info (position, speed, acceleration, lane, total messages)
+				// Display truck info (position, speed, acceleration, lane,
+				// total messages)
 				System.out.println("TRUCK     POS     SPEED     ACC     LANE");
 				for (int i = 0; i < totalTrucks; i++) {
-					if (truckInitialized[i]) { 			// make sure you only display trucks that have been
+					if (truckInitialized[i]) { // make sure you only display
+												// trucks that have been
 						System.out.println("  " + theTrucks[i].getTruckNumber()
 								+ "       " + theTrucks[i].getPos()
 								+ "        " + theTrucks[i].getSpeed()
@@ -351,23 +351,27 @@ public class TheAir {
 								+ "        " + theTrucks[i].getLane());
 					}
 				}
-				
-				//Clear the console (may be different depending on OS)
+
+				// Clear the console (may be different depending on OS)
 				try {
-					Runtime.getRuntime().exec("cls");// for mac 
+					Runtime.getRuntime().exec("clear");// for mac
 					// Runtime.getRuntime().exec("cls"); // for windows
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				
-				while (((System.nanoTime() - UITickStart) / 1000000) < (1 / UITickStart)) {
+
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
 				}
+				// while (((System.nanoTime() - UITickStart) / 1000000) < (1 /
+				// (UITickStart*10))) {
+				// }
 
 			}
 			// TODO: busy wait for ui thread tick to finish
 
-			
-			// merge test
 		}
-}
+	}
 }

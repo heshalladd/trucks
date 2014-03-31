@@ -113,7 +113,7 @@ public class Truck {
 					+ this.lane + ".");
 		} else {
 			// randomize lane accordingly
-			lane = rand.nextInt((MAX_LANE - MIN_LANE) + 1) + MIN_LANE;
+			this.lane = rand.nextInt(MAX_LANE) + MIN_LANE;
 			System.out.println("[NORMAL] Truck lane randomly initialized to "
 					+ this.lane + ".");
 		}
@@ -374,10 +374,6 @@ public class Truck {
 		// acceleration
 		// TODO: if stabilizing countdown != 0 do stuff to stabilize
 		// TODO: change lanes if area is clear
-		// TODO: if distance to next forward truck is not the margin, try to get
-		// there
-		// NOTE: only do this if it is solo or multi convoy and is in the same
-		// lane
 
 	}
 
@@ -613,6 +609,7 @@ public class Truck {
 					DatagramPacket receivedPacket = new DatagramPacket(
 							receivedData, receivedData.length);
 					airUDPSocket.receive(receivedPacket);
+					System.out.println("[NORMAL] Received packet:" + new String(receivedPacket.getData()));
 					incomingUDPMessages
 							.add(new String(receivedPacket.getData())
 									.split("\n")[0]);

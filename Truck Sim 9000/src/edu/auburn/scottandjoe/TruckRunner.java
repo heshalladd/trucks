@@ -61,7 +61,6 @@ public class TruckRunner {
 
 						startMessage = in.readLine();
 					}
-					in.close();
 
 					// start a listener for the restart signal
 					new RestartListener(airTCPSock).start();
@@ -127,7 +126,7 @@ public class TruckRunner {
 				while (!restarted) {
 					truckMessages = new ArrayList<String>();
 					// tell truck to receive response
-					theTruck.handleMessage();
+					truckMessages = theTruck.handleMessage();
 					// send messages to the air for appropriate forwarding
 					if (truckMessages.size() != 0) {
 						for (int i = 0; i < truckMessages.size(); i++) {
@@ -137,7 +136,7 @@ public class TruckRunner {
 				}
 			} catch (IOException e) {
 				System.out
-						.println("[SEVERE] IOException in thread that handles message handoff.");
+						.println("[SEVERE] IOException in thread that handles message handoff." + e);
 			} catch (NumberFormatException e) {
 				e.printStackTrace();
 			} catch (FatalTruckException e) {
