@@ -29,11 +29,15 @@ public class TheAir {
 																// false
 																// (desired)
 
+		
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		System.out.println("[NORMAL] Launching \"The Air\"");
+		
+
+		
 		port = 0;
 		if (args.length == 0) {
 			System.out
@@ -260,7 +264,10 @@ public class TheAir {
 
 	private class UIThread extends Thread {
 		private int newLane;
-
+		long UITickStart = 0l;
+		int UITickRate = TheAir.TICK_RATE;
+		
+		
 		public UIThread() {
 		}
 
@@ -277,7 +284,7 @@ public class TheAir {
 			// 5 550 66 4 1
 			
 			while (true) {
-
+				UITickStart = System.nanoTime();
 				//Prepare the ArrayList for sorting
 				ArrayList<Truck> truckList = new ArrayList<Truck>();
 				for (int i = 0; i < totalTrucks; i++) {
@@ -317,13 +324,16 @@ public class TheAir {
 								+ "        " + theTrucks[i].getLane());
 					}
 				}
-
+				
 				//Clear the console (may be different depending on OS)
 				try {
 					Runtime.getRuntime().exec("clear");// for mac 
 					// Runtime.getRuntime().exec("cls"); // for windows
 				} catch (IOException e) {
 					e.printStackTrace();
+				}
+				
+				while (((System.nanoTime() - UITickStart) / 1000000) < (1 / UITickStart)) {
 				}
 
 			}
