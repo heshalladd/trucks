@@ -9,7 +9,11 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Random;
+
+import edu.auburn.scottandjoe.Truck;
 
 public class TheAir {
 
@@ -229,7 +233,34 @@ public class TheAir {
 
 		public void run() {
 			//TODO: add ui here
+			ArrayList<Truck> truckList = new ArrayList<Truck>();
+			for(int i = 0; i<totalTrucks; i++){
+				truckList.add(theTrucks[i]);
+			}
 			
+			Collections.sort(truckList, new Comparator<Truck>(){
+			     public int compare(Truck t1, Truck t2){
+			         if(t1.getPos() == t2.getPos())
+			             return 0;
+			         return t1.getPos() < t2.getPos() ? -1 : 1;
+			     }
+			});
+			System.out.print("_______________________________________________________");
+			for(int i = 0; i<totalTrucks; i++){
+				if(truckInitialized[i])
+				System.out.print("-  -[" + truckList.get(i).getTruckNumber() + ":" + truckList.get(i).getPos() + "] -   -" );
+			}
+			System.out.print("_______________________________________________________");
+			//________________________________________
+			//- - -[1:360][3:390][4:440][2:450][5:550] -   -    -
+			//----------------------------------------
+
+			//TODO: display truck info (position, speed, acceleration, lane, total messages)
+			//TODO: make sure you only display trucks that have been initialized
+			//TODO: busy wait for ui thread tick to finish
+
+			//TIP: use clearConsole() to do so.
+			//TODO: clear screen and start the loop over again
 			//TODO: display truck info (position, speed, acceleration, lane, total messages)
 			//TODO: make sure you only display trucks that have been initialized
 			//TODO: busy wait for ui thread tick to finish
