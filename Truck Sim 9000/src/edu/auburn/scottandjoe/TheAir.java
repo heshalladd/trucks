@@ -1,8 +1,11 @@
 package edu.auburn.scottandjoe;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -24,6 +27,7 @@ public class TheAir {
 	public static int[] totalMessages = new int[5];
 	public static int port;
 	public static String[] truckAddresses = new String[5];
+	public static boolean start = false;
 	public static boolean[] truckInitialized = new boolean[5]; // will
 																// initialize to
 																// false
@@ -64,8 +68,6 @@ public class TheAir {
 		while (true) {
 			try {
 				System.out.println("[NORMAL] Status: Waiting for connections.");
-				// TODO: spawn ui thread (for displaying stuff and also waiting
-				// for start and restart keypress
 				while (true) {
 					// spawn new thread to handle each connection to allow for
 					// simultaneous
@@ -73,6 +75,11 @@ public class TheAir {
 
 					new MessageHandler(server.accept()).start();
 					totalTrucks++;
+					System.out.println("[NORMAL] " + totalTrucks + " trucks connected.");
+					if(totalTrucks == 5)
+					{
+						start = true;
+					}
 				}
 			} catch (IOException e) {
 				System.out
@@ -114,9 +121,19 @@ public class TheAir {
 						socket.getInputStream()));
 				String[] receivedMessage;
 				String receivedMessageWhole = "";
-
+				
 				// TODO:transmit request for status and transmission
-
+				while(!start){
+					Thread.sleep(2000);
+				}
+				System.out.println("[NORMAL] Starting simulation");
+				PrintWriter out = new PrintWriter(new BufferedWriter(
+						new OutputStreamWriter(socket.getOutputStream())),
+						true);
+				out.println("start");
+				// spawn ui thread (for displaying stuff)
+				new UIThread().start();
+				
 				while (true) {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
@@ -246,8 +263,17 @@ public class TheAir {
 
 			}
 
-			catch (IOException | NumberFormatException | FatalTruckException e) {
+			catch (IOException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
+			}
+			catch (NumberFormatException e) {
+				System.out.println("[SEVERE] Error in Request Handler:" + e);
+			}
+			catch (FatalTruckException e) {
+				System.out.println("[SEVERE] Error in Request Handler:" + e);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 
 			finally {
@@ -262,7 +288,7 @@ public class TheAir {
 
 	}
 
-	private class UIThread extends Thread {
+	private static class UIThread extends Thread {
 		private int newLane;
 		long UITickStart = 0l;
 		int UITickRate = TheAir.TICK_RATE;
@@ -343,5 +369,5 @@ public class TheAir {
 			
 			// merge test
 		}
-	}
+}
 }
