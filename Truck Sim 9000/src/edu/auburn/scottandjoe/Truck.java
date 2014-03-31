@@ -3,9 +3,6 @@ package edu.auburn.scottandjoe;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -39,14 +36,14 @@ public class Truck {
 	// 5 - in a full convoy
 	// 6 - collided
 	// 7 - merging convoy(trying to join the convoy in front of it)
-	private static final int NEW_TRUCK = 0;
-	private static final int STABILIZING = 1;
-	private static final int STABILIZED = 2;
-	private static final int SOLO_CONVOY = 3;
-	private static final int MULTI_CONVOY = 4;
-	private static final int FULL_CONVOY = 5;
-	private static final int COLLIDED = 6;
-	private static final int MERGING_CONVOY = 7;
+	public static final int NEW_TRUCK = 0;
+	public static final int STABILIZING = 1;
+	public static final int STABILIZED = 2;
+	public static final int SOLO_CONVOY = 3;
+	public static final int MULTI_CONVOY = 4;
+	public static final int FULL_CONVOY = 5;
+	public static final int COLLIDED = 6;
+	public static final int MERGING_CONVOY = 7;
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
@@ -220,7 +217,7 @@ public class Truck {
 		return 1;
 	}
 
-	public void updateDesires() {
+	public void updateDesires() throws FatalTruckException {
 
 		// switch statement to enter state logic
 		switch (truckAIState) {
@@ -252,15 +249,15 @@ public class Truck {
 
 		case STABILIZING:
 			// if done stabilizing, become stabilized
-			if (stabilizingCountdown == 0) {
+			if (stabilizingCountdown <= 0) {
 				truckAIState = STABILIZED;
 			}
 			stabilizingCountdown--;
 			break;
 
 		case STABILIZED:
-			// become a solo convoy and move over to lane 1
-			desiredLane = 1;
+			// // become a solo convoy and move over to lane 1
+			//desiredLane = 1;
 			truckAIState = SOLO_CONVOY;
 			// NOTE: this state is here in case something else needs to happen
 			// when tweaking AI code
@@ -356,28 +353,41 @@ public class Truck {
 				}
 			}
 			if (nextTruck != null) {
-				if (nextTruck.getPos() - pos < 13.0) {
+				if (nextTruck.getPos() - pos < MAX_CONVOY_GAP - 7) {
 					// once within acceptable range, become a MULTI_CONVOY
 					truckAIState = MULTI_CONVOY;
+					convoyID = nextTruck.getConvoyID();
 				}
-				if (nextTruck.getPos() - pos > 13.0) {
+				if (nextTruck.getPos() - pos > MAX_CONVOY_GAP - 7) {
 					desiredSpeed = MERGING_CATCHING_SPEED;
 				}
 			}
 			break;
-		case COLLIDED:
-			// TODO: if there was a collision, explode appropriately
-			break;
 
 		default:
-			// TODO: explode appropriately for not being in a recognizeable
-			// state
+			break;
 		}
 
+		//logic to try to maintain a gap
+		Truck nextTruck = null;
+		for (int i = 0; i < truckCache.length; i++) {
+			if (truckInitialized[i]
+					&& truckNumber - 1 != i
+					&& !truckCache[i].getConvoyID().equals(convoyID)
+					&& truckCache[i].getOrderInConvoy() == orderInConvoy - 1) {
+				nextTruck = truckCache[i];
+			}
+		}
+		if (nextTruck.getPos() - pos < MIN_CONVOY_GAP) {
+			desiredSpeed = desiredSpeed - 0.5;
+		}
+		if (nextTruck.getPos() - pos > MAX_CONVOY_GAP) {
+			desiredSpeed = desiredSpeed + 0.2;
+		}
 		// logic to try to make truck its desired speed by modifying
 		// acceleration
 		if (this.speed < this.desiredSpeed) {
-			if (this.acceleration < MAX_ACCELERATION - 0.11) {
+			if (this.acceleration < MAX_ACCELERATION - 0.2) {
 				if (this.acceleration < 0) {
 					this.acceleration = 0;
 				} else {
@@ -385,7 +395,7 @@ public class Truck {
 				}
 			}
 		} else {
-			if (this.acceleration > MIN_ACCELERATION + 0.21) {
+			if (this.acceleration > MIN_ACCELERATION + 0.4) {
 				if (this.acceleration > 0) {
 					this.acceleration = 0;
 				} else {
@@ -405,7 +415,7 @@ public class Truck {
               			//we're good
               		}
               		else{
-              			//CRASH!!!
+              			explode("COLLISION! BOOOM!");
               		}
               	}
               	else if(this.pos < truckCache[i].pos)// else if the front is less then the front of the other truck
@@ -413,7 +423,7 @@ public class Truck {
               			//we're good
               		}
               		else{
-              			//CRASH!!!
+              			explode("COLLISION! BOOOM!");
               		}
 				}
 			}
@@ -559,7 +569,10 @@ public class Truck {
 	public int getOrderInConvoy() {
 		return orderInConvoy;
 	}
-
+	
+	public int getTruckAIState() {
+		return this.truckAIState;
+	}
 	// set messages per second
 	public void setMPS(int mps) {
 		this.messagesPerSecond = mps;

@@ -9,9 +9,9 @@ import java.io.PrintWriter;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashMap;
 
 public class TruckRunner {
 	private static int tickRate = TheAir.TICK_RATE;
@@ -83,6 +83,7 @@ public class TruckRunner {
 			}
 		} catch (FatalTruckException e) {
 			System.out.println("[CRITICAL] " + e);
+			System.exit(99);
 		}
 	}
 
@@ -142,6 +143,7 @@ public class TruckRunner {
 				e.printStackTrace();
 			} catch (FatalTruckException e) {
 				e.printStackTrace();
+				System.exit(99);
 			}
 		}
 	}
@@ -152,8 +154,18 @@ public class TruckRunner {
 
 		public UIThread() {
 		}
-
+		
 		public void run() {
+			HashMap<Integer, String> AIMap = new HashMap<Integer,String>();
+			AIMap.put(0, "NEW_TRUCK");
+			AIMap.put(1, "STABILIZING");
+			AIMap.put(2, "STABILIZED");
+			AIMap.put(3, "SOLO_CONVOY");
+			AIMap.put(4, "MULTI_CONVOY");
+			AIMap.put(5, "FULL_CONVOY");
+			AIMap.put(6, "COLLIDED");
+			AIMap.put(7, "MERGING_CONVOY");
+			DecimalFormat df = new DecimalFormat("0.0");
 			while (true) {
 				//Clear Console on Linux
 				final String ANSI_CLS = "\u001b[2J"; 
@@ -163,20 +175,23 @@ public class TruckRunner {
 				
 				UITickStart = System.nanoTime();
 				System.out.println("===============");
-				System.out.println("Truck: " + theTruck.getTruckNumber());
-				System.out.println("Pos:   " + theTruck.getPos());
-				System.out.println("Accel: " + theTruck.getAcceleration());
-				System.out.println("Lane:  " + theTruck.getLane());
+				System.out.println("Truck:     " + theTruck.getTruckNumber());
+				System.out.println("Pos:       " + df.format(theTruck.getPos()));
+				System.out.println("Speed      " + df.format(theTruck.getSpeed()));
+				System.out.println("Accel:     " + df.format(theTruck.getAcceleration()));
+				System.out.println("Lane:      " + theTruck.getLane());
+				System.out.println("ConvoyID:  " + theTruck.getConvoyID()); 
+		        System.out.println("Order:     " + theTruck.getOrderInConvoy());
+		        System.out.println("AIState:   " + AIMap.get(theTruck.getTruckAIState()));
+		        System.out.println("Maybe 1st? " + theTruck.getProbablyFirst());
 				System.out.println("===============");
 				
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
+				//debug 2.0 to 9999999
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (999999.0 / (double) UITickRate)) {
 				}
 
 			}
-			// TODO: busy wait for ui thread tick to finish
 		}
-
-		// merge test
 	}
 
 }

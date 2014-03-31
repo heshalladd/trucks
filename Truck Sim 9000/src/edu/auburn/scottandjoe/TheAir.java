@@ -91,20 +91,6 @@ public class TheAir {
 		}
 	}
 
-	private static void clearConsole() {
-		try {
-			String os = System.getProperty("os.name");
-			if (os.contains("Windows")) {
-				Runtime.getRuntime().exec("cls");
-			} else {
-				// linux or mac
-				Runtime.getRuntime().exec("clear");
-			}
-		} catch (Exception exception) {
-			System.out.println("[SEVERE] Error in clearing screen.");
-		}
-	}
-
 	private static class MessageHandler extends Thread {
 		private Socket socket;
 
@@ -137,83 +123,90 @@ public class TheAir {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
 					receivedMessage = receivedMessageWhole.split(",");
-					//System.out.println("[DEBUG] Whole Message:" + receivedMessageWhole);
-					//for(int i = 0; i < receivedMessage.length; i++) {
-					//	System.out.println("[DEBUG]" + receivedMessage[i]);
-					//}
+					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
+					int messageTruckNumber = 0;
+					// System.out.println("[DEBUG] Whole Message:" +
+					// receivedMessageWhole);
+					// for(int i = 0; i < receivedMessage.length; i++) {
+					// System.out.println("[DEBUG]" + receivedMessage[i]);
+					// }
 					// update sourceAddress in message if it was 0 (unset)
 					if (Integer.decode(receivedMessage[1]) == 0) {
 						receivedMessage[1] = socket.getRemoteSocketAddress()
 								.toString().split("/")[1].split(":")[0];
 					}
-					// scrape truck data for air cache
-					int messageTruckNumber = Integer.decode(receivedMessage[7]);
-					totalMessages[messageTruckNumber - 1]++;
-					if (truckInitialized[messageTruckNumber - 1] && receivedMessage.length == 14) {
-						theTrucks[messageTruckNumber - 1]
-								.setSequenceNumber(Integer
-										.decode(receivedMessage[0]));
-						theTrucks[messageTruckNumber - 1]
-								.setAcceleration(Double
-										.parseDouble(receivedMessage[4]));
-						theTrucks[messageTruckNumber - 1].setPos(Double
-								.parseDouble(receivedMessage[5]));
-						theTrucks[messageTruckNumber - 1].setSpeed(Double
-								.parseDouble(receivedMessage[6]));
-						theTrucks[messageTruckNumber - 1].setLane(Integer
-								.decode(receivedMessage[8]));
-						theTrucks[messageTruckNumber - 1]
-								.setDesiredLane(Integer
-										.decode(receivedMessage[9]));
-						theTrucks[messageTruckNumber - 1]
-								.setDesiredPlaceInConvoy(Integer
-										.decode(receivedMessage[10]));
-						theTrucks[messageTruckNumber - 1]
-								.setConvoyID(receivedMessage[11]);
-						theTrucks[messageTruckNumber - 1]
-								.setOrderInConvoy(Integer
-										.decode(receivedMessage[12]));
-					} else if(receivedMessage.length == 14){
-						// add address of truck to air cache of truck addresses
-						// and ports
-						truckAddresses[messageTruckNumber - 1] = socket
-								.getRemoteSocketAddress().toString().split("/")[1].split(":")[0];
-						// initialize truck for cache
-						theTrucks[messageTruckNumber - 1] = new Truck(
-								messageTruckNumber,
-								Integer.decode(receivedMessage[8]),
-								Double.parseDouble(receivedMessage[5]),
-								Double.parseDouble(receivedMessage[6]),
-								Double.parseDouble(receivedMessage[4]));
-						// add other data
-						theTrucks[messageTruckNumber - 1]
-								.setSequenceNumber(Integer
-										.decode(receivedMessage[0]));
-						theTrucks[messageTruckNumber - 1]
-								.setDesiredLane(Integer
-										.decode(receivedMessage[9]));
-						theTrucks[messageTruckNumber - 1]
-								.setDesiredPlaceInConvoy(Integer
-										.decode(receivedMessage[10]));
-						theTrucks[messageTruckNumber - 1]
-								.setConvoyID(receivedMessage[11]);
-						theTrucks[messageTruckNumber - 1]
-								.setOrderInConvoy(Integer
-										.decode(receivedMessage[12]));
-						truckInitialized[messageTruckNumber - 1] = true;
-					}
 
-					// determine who the broadcast is in range of
-					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
-					for (int i = 0; i < theTrucks.length; i++) {
-						if (i != messageTruckNumber - 1
-								&& truckInitialized[i]
-								&& Math.abs(theTrucks[messageTruckNumber - 1]
-										.getPos() - theTrucks[i].getPos()) < 100) {
-							trucksInRange.add(theTrucks[i]);
+					// scrape truck data for air cache
+					if (receivedMessage.length == 14) {
+						messageTruckNumber = Integer.decode(receivedMessage[7]);
+						totalMessages[messageTruckNumber - 1]++;
+						if (truckInitialized[messageTruckNumber - 1]
+								&& receivedMessage.length == 14) {
+							theTrucks[messageTruckNumber - 1]
+									.setSequenceNumber(Integer
+											.decode(receivedMessage[0]));
+							theTrucks[messageTruckNumber - 1]
+									.setAcceleration(Double
+											.parseDouble(receivedMessage[4]));
+							theTrucks[messageTruckNumber - 1].setPos(Double
+									.parseDouble(receivedMessage[5]));
+							theTrucks[messageTruckNumber - 1].setSpeed(Double
+									.parseDouble(receivedMessage[6]));
+							theTrucks[messageTruckNumber - 1].setLane(Integer
+									.decode(receivedMessage[8]));
+							theTrucks[messageTruckNumber - 1]
+									.setDesiredLane(Integer
+											.decode(receivedMessage[9]));
+							theTrucks[messageTruckNumber - 1]
+									.setDesiredPlaceInConvoy(Integer
+											.decode(receivedMessage[10]));
+							theTrucks[messageTruckNumber - 1]
+									.setConvoyID(receivedMessage[11]);
+							theTrucks[messageTruckNumber - 1]
+									.setOrderInConvoy(Integer
+											.decode(receivedMessage[12]));
+						} else if (receivedMessage.length == 14) {
+							// add address of truck to air cache of truck
+							// addresses
+							// and ports
+							truckAddresses[messageTruckNumber - 1] = socket
+									.getRemoteSocketAddress().toString()
+									.split("/")[1].split(":")[0];
+							// initialize truck for cache
+							theTrucks[messageTruckNumber - 1] = new Truck(
+									messageTruckNumber,
+									Integer.decode(receivedMessage[8]),
+									Double.parseDouble(receivedMessage[5]),
+									Double.parseDouble(receivedMessage[6]),
+									Double.parseDouble(receivedMessage[4]));
+							// add other data
+							theTrucks[messageTruckNumber - 1]
+									.setSequenceNumber(Integer
+											.decode(receivedMessage[0]));
+							theTrucks[messageTruckNumber - 1]
+									.setDesiredLane(Integer
+											.decode(receivedMessage[9]));
+							theTrucks[messageTruckNumber - 1]
+									.setDesiredPlaceInConvoy(Integer
+											.decode(receivedMessage[10]));
+							theTrucks[messageTruckNumber - 1]
+									.setConvoyID(receivedMessage[11]);
+							theTrucks[messageTruckNumber - 1]
+									.setOrderInConvoy(Integer
+											.decode(receivedMessage[12]));
+							truckInitialized[messageTruckNumber - 1] = true;
+						}
+
+						// determine who the broadcast is in range of
+						for (int i = 0; i < theTrucks.length; i++) {
+							if (i != messageTruckNumber - 1
+									&& truckInitialized[i]
+									&& Math.abs(theTrucks[messageTruckNumber - 1]
+											.getPos() - theTrucks[i].getPos()) < 100) {
+								trucksInRange.add(theTrucks[i]);
+							}
 						}
 					}
-
 					// determine whether those messages are going to make it
 					// through
 					if (trucksInRange.size() > 0) {
@@ -308,20 +301,21 @@ public class TheAir {
 			// 4 440 55 2 1
 			// 5 550 66 4 1
 
-			DecimalFormat df = new DecimalFormat("#.0");
+			DecimalFormat df = new DecimalFormat("0.0");
 			while (true) {
-				//final String ANSI_CLS = "\u001b[2J"; 
-				//final String ANSI_HOME = "\u001b[H"; 
-				//System.out.print(ANSI_CLS + ANSI_HOME); 
-				//System.out.flush();
-				
+				final String ANSI_CLS = "\u001b[2J";
+				final String ANSI_HOME = "\u001b[H";
+				System.out.print(ANSI_CLS + ANSI_HOME);
+				System.out.flush();
+
 				UITickStart = System.nanoTime();
-				
+
 				// Prepare the ArrayList for sorting
 				ArrayList<Truck> truckList = new ArrayList<Truck>();
 				for (int i = 0; i < totalTrucks; i++) {
 					if (truckInitialized[i]) { // make sure you only display
-												// trucks that have been initialized
+												// trucks that have been
+												// initialized
 						truckList.add(theTrucks[i]);
 					}
 				}
@@ -349,21 +343,17 @@ public class TheAir {
 				// Display truck info (position, speed, acceleration, lane,
 				// total messages)
 				System.out.println("TRUCK     POS     SPEED     ACC     LANE");
-				for (int i = 0; i < totalTrucks; i++) {
-					if (truckInitialized[i]) { // make sure you only display
-												// trucks that have been
-						System.out.println("  " + theTrucks[i].getTruckNumber()
-								+ "       " + df.format(theTrucks[i].getPos())
-								+ "        " + df.format(theTrucks[i].getSpeed())
-								+ "       " + df.format(theTrucks[i].getAcceleration())
-								+ "        " + theTrucks[i].getLane());
-					}
+				for (Truck truck : truckList) {
+					System.out.println("  " + truck.getTruckNumber()
+							+ "       " + df.format(truck.getPos())
+							+ "        " + df.format(truck.getSpeed())
+							+ "       " + df.format(truck.getAcceleration())
+							+ "        " + truck.getLane());
 				}
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (10.0 / (double) UITickRate)) {
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (1.0 / (double) UITickRate)) {
 				}
 
 			}
-			// TODO: busy wait for ui thread tick to finish
 
 		}
 	}
