@@ -29,6 +29,7 @@ public class TheAir {
 	public static int port;
 	public static String[] truckAddresses = new String[5];
 	public static boolean start = false;
+	public static boolean collision = false;
 	public static boolean[] truckInitialized = new boolean[5]; // will
 																// initialize to
 																// false
@@ -120,18 +121,30 @@ public class TheAir {
 				new UIThread().start();
 
 				while (true) {
+					if (collision) {
+						PrintWriter out;
+						try {
+							out = new PrintWriter(new BufferedWriter(
+									new OutputStreamWriter(
+											socket.getOutputStream())), true);
+							out.println("crash");
+						} catch (IOException e1) {
+						}
+					}
+
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
 					receivedMessage = receivedMessageWhole.split(",");
 					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
 					int messageTruckNumber = 0;
-					
+
 					// scrape truck data for air cache
 					if (receivedMessage.length == 14) {
 						// update sourceAddress in message if it was 0 (unset)
 						if (Integer.decode(receivedMessage[1]) == 0) {
-							receivedMessage[1] = socket.getRemoteSocketAddress()
-									.toString().split("/")[1].split(":")[0];
+							receivedMessage[1] = socket
+									.getRemoteSocketAddress().toString()
+									.split("/")[1].split(":")[0];
 						}
 						messageTruckNumber = Integer.decode(receivedMessage[7]);
 						totalMessages[messageTruckNumber - 1]++;
@@ -250,25 +263,35 @@ public class TheAir {
 							}
 						}
 					}
-					
-					//check for collision
-					for (int j = 0; j < theTrucks.length-1; j++) {
+
+					// check for collision
+					for (int j = 0; j < theTrucks.length - 1; j++) {
 						for (int i = 0; i < theTrucks.length; i++) {
-							if (truckInitialized[i] && truckInitialized[j] && j != i){
-								if(theTrucks[j].getPos() > theTrucks[i].getPos()){
-									if(theTrucks[j].getPos() - 25 > theTrucks[i].getPos()){ 
-										//we're good
+							if (truckInitialized[i] && truckInitialized[j]
+									&& j != i) {
+								if (theTrucks[j].getPos() > theTrucks[i]
+										.getPos()) {
+									if (theTrucks[j].getPos() - 25 > theTrucks[i]
+											.getPos()) {
+										// we're good
+									} else {
+										System.out.println("[COLLISION] Truck "
+												+ (j + 1) + " ran into  Truck " + (i + 1)
+												+ "!");
+										theTrucks[j]
+												.explode("COLLISION! BOOOM!");
 									}
-									else{
-										theTrucks[j].explode("COLLISION! BOOOM!");
-									}
-								}
-								else if(theTrucks[j].getPos() < theTrucks[i].getPos()) {
-									if(theTrucks[j].getPos() < theTrucks[i].getPos() - 25){
-										//we're good
-									}
-									else{
-										theTrucks[j].explode("COLLISION! BOOOM!");
+								} else if (theTrucks[j].getPos() < theTrucks[i]
+										.getPos()) {
+									if (theTrucks[j].getPos() < theTrucks[i]
+											.getPos() - 25) {
+										// we're good
+									} else {
+										System.out.println("[COLLISION] Truck "
+												+ (i + 1) + " ran into  Truck " + (j + 1)
+												+ "!");
+										theTrucks[j]
+												.explode("COLLISION! BOOOM!");
 									}
 								}
 							}
@@ -292,6 +315,11 @@ public class TheAir {
 							true);
 					out.println("crash");
 				} catch (IOException e1) {
+				}
+				collision = true;
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e1) {
 				}
 				System.exit(99);
 			} catch (InterruptedException e) {
@@ -370,7 +398,8 @@ public class TheAir {
 
 				// Display truck info (position, speed, acceleration, lane,
 				// total messages)
-				System.out.println("TRUCK     POS            SPEED      ACC      LANE");
+				System.out
+						.println("TRUCK     POS            SPEED      ACC      LANE");
 				for (Truck truck : truckList) {
 					System.out.println("  " + truck.getTruckNumber()
 							+ "       " + df.format(truck.getPos())
@@ -378,7 +407,7 @@ public class TheAir {
 							+ "       " + df.format(truck.getAcceleration())
 							+ "        " + truck.getLane());
 				}
-				
+
 				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (1.0 / (double) UITickRate)) {
 				}
 

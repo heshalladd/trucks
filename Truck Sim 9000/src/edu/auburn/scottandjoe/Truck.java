@@ -47,11 +47,11 @@ public class Truck {
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
-	private static final double SOLO_CATCHING_SPEED = 32.7;
-	private static final double MERGING_CATCHING_SPEED = 32.2;
-	private static final double MULTI_CATCHING_SPEED = 31.7;
-	private static final double MIN_CONVOY_GAP = 10.0;
-	private static final double MAX_CONVOY_GAP = 20.0;
+	private static final double SOLO_CATCHING_SPEED = 31.4;
+	private static final double MERGING_CATCHING_SPEED = 31.4;
+	private static final double MULTI_CATCHING_SPEED = 31.4;
+	private static final double MIN_CONVOY_GAP = 15.0;
+	private static final double MAX_CONVOY_GAP = 25.0;
 
 	// tick rate taken from the air
 	private int tickRate = TheAir.TICK_RATE;
@@ -274,6 +274,7 @@ public class Truck {
 					// if a truck has been found ahead, change to merging convoy
 					// and join the convoy ahead
 					truckAIState = MERGING_CONVOY;
+					desiredSpeed = MERGING_CATCHING_SPEED;
 					convoyID = truckCache[i].getConvoyID();
 					orderInConvoy = truckCache[i].getOrderInConvoy() + 1;
 					break;
@@ -318,6 +319,7 @@ public class Truck {
 				if (truckInitialized[i] && truckNumber - 1 != i
 						&& truckCache[i].getPos() > pos
 						&& !truckCache[i].getConvoyID().equals(convoyID)
+						&& truckCache[i].getPos() - pos > 30
 						&& truckCache[i].getLane() == lane) {
 					truckAIState = SOLO_CONVOY;
 					break;
@@ -346,22 +348,34 @@ public class Truck {
 			for (int i = 0; i < truckCache.length; i++) {
 				if (truckInitialized[i]
 						&& truckNumber - 1 != i
-						&& !truckCache[i].getConvoyID().equals(convoyID)
+						&& truckCache[i].getConvoyID().equals(convoyID)
 						&& truckCache[i].getOrderInConvoy() == orderInConvoy - 1) {
 					nextTruck = truckCache[i];
 					break;
 				}
 			}
 			if (nextTruck != null) {
+				convoyID = nextTruck.getConvoyID();
+				orderInConvoy = nextTruck.getOrderInConvoy() + 1;
 				if (nextTruck.getPos() - pos < MAX_CONVOY_GAP) {
 					// once within acceptable range, become a MULTI_CONVOY
 					truckAIState = MULTI_CONVOY;
 					convoyID = nextTruck.getConvoyID();
 				}
-				if (nextTruck.getPos() - pos > MAX_CONVOY_GAP) {
-					desiredSpeed = MERGING_CATCHING_SPEED;
-				}
+				//if (nextTruck.getPos() - pos > MAX_CONVOY_GAP) {
+				//	desiredSpeed = MERGING_CATCHING_SPEED;
+				//}
 			}
+			// if there is a truck in this convoy with position 5, become full
+						// convoy
+						for (int i = 0; i < truckCache.length; i++) {
+							if (truckInitialized[i] && truckNumber - 1 != i
+									&& !truckCache[i].getConvoyID().equals(convoyID)
+									&& truckCache[i].getOrderInConvoy() == 5) {
+								truckAIState = FULL_CONVOY;
+								break;
+							}
+						}
 			break;
 
 		default:
@@ -379,10 +393,15 @@ public class Truck {
 			}
 		}
 		if (nextTruck != null && nextTruck.getPos() - pos < MIN_CONVOY_GAP) {
-			desiredSpeed = desiredSpeed - 0.2;
+			desiredSpeed = desiredSpeed - 1;
 		}
 		if (nextTruck != null && nextTruck.getPos() - pos > MAX_CONVOY_GAP) {
 			desiredSpeed = desiredSpeed + 0.05;
+		}
+		if(nextTruck != null && nextTruck.getPos() - pos < 40)
+		{
+			convoyID = nextTruck.getConvoyID();
+			orderInConvoy = nextTruck.getOrderInConvoy() + 1;
 		}
 		// logic to try to make truck its desired speed by modifying
 		// acceleration

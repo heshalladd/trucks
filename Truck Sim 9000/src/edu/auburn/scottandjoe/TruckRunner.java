@@ -105,12 +105,8 @@ public class TruckRunner {
 				while (started) {
 					String crashMessage = in.readLine();
 					if (crashMessage.equals("crash")) {
-						try {
-							theTruck.explode("COLLISION! BOOM!");
-						} catch (FatalTruckException e) {
-							System.out.println("[CRITICAL] " + e);
+							System.out.println("COLLISION! BOOM!");
 							System.exit(99);
-						}
 					}
 				}
 
