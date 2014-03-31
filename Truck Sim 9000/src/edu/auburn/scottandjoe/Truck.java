@@ -7,7 +7,7 @@ import java.text.DecimalFormat;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class Truck {
@@ -66,7 +66,7 @@ public class Truck {
 	private double desiredSpeed;
 	private double startPos;
 	private String convoyID = UUID.randomUUID().toString(); // id of convoy
-	private static ConcurrentLinkedDeque<String> incomingUDPMessages = new ConcurrentLinkedDeque<String>();
+	private static ConcurrentLinkedQueue<String> incomingUDPMessages = new ConcurrentLinkedQueue<String>();
 	private boolean changingLanes = false;
 	private boolean probablyFirst = false;
 
