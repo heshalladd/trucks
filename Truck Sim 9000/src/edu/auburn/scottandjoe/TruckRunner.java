@@ -15,7 +15,7 @@ import java.util.HashMap;
 
 public class TruckRunner {
 	private static int tickRate = TheAir.TICK_RATE;
-	private static boolean restarted = false;
+	private static boolean started = false;
 	private static String startMessage = "";
 	private static Truck theTruck;
 
@@ -27,7 +27,7 @@ public class TruckRunner {
 	// args[0] - "the air" ip
 	// args[1] - "the air" port
 	// args[2] - truck number (1 - 5)
-	// args[3] - config file
+	// args[3] - start pos
 	public static void main(String[] args) throws IOException {
 		String airIP = args[0];
 		int airPort = Integer.decode(args[1]);
@@ -36,7 +36,8 @@ public class TruckRunner {
 
 		int truckNumber = Integer.decode(args[2]);
 		int lane = Truck.RANDOMIZE_INT;
-		double pos = Truck.RANDOMIZE_DOUBLE;
+		double pos = Double.parseDouble(args[3]);
+		// double pos = Truck.RANDOMIZE_DOUBLE;
 		double speed = Truck.RANDOMIZE_DOUBLE;
 		double acceleration = Truck.RANDOMIZE_DOUBLE;
 		// TODO:load from config
@@ -61,15 +62,16 @@ public class TruckRunner {
 
 						startMessage = in.readLine();
 					}
+					started = true;
 					// start thread for doing message handoffs to air, and also
 					// telling the truck to listen for broadcasts
 					new MessageHandoffHandler(airTCPSock).start();
 					// start a listener for the restart signal
-					new RestartListener(airTCPSock).start();
+					new CrashListener(airTCPSock).start();
 					// start ui thread
 					new UIThread().start();
 					// while loop to do tick limited truck updates
-					while (!restarted) {
+					while (started) {
 						tickStart = System.nanoTime();
 						theTruck.updateDesires();
 						theTruck.updatePhysical();
@@ -87,20 +89,29 @@ public class TruckRunner {
 		}
 	}
 
-	private static class RestartListener extends Thread {
+	private static class CrashListener extends Thread {
 		private Socket airSocket;
 
-		public RestartListener(Socket airSocket) {
+		public CrashListener(Socket airSocket) {
 			this.airSocket = airSocket;
 		}
 
 		public void run() {
 			try {
-				BufferedReader in = new BufferedReader(new InputStreamReader(
-						airSocket.getInputStream()));
-				String restartMessage = in.readLine();
-				if (restartMessage.equals("restart")) {
-					restarted = true;
+				while (!started) {
+				}
+				BufferedReader in = new BufferedReader(
+						new InputStreamReader(airSocket.getInputStream()));
+				while (started) {
+					String crashMessage = in.readLine();
+					if (crashMessage.equals("crash")) {
+						try {
+							theTruck.explode("COLLISION! BOOM!");
+						} catch (FatalTruckException e) {
+							System.out.println("[CRITICAL] " + e);
+							System.exit(99);
+						}
+					}
 				}
 
 			} catch (IOException e) {
@@ -124,7 +135,7 @@ public class TruckRunner {
 				PrintWriter out = new PrintWriter(new BufferedWriter(
 						new OutputStreamWriter(airSocket.getOutputStream())),
 						true);
-				while (!restarted) {
+				while (true) {
 					truckMessages = new ArrayList<String>();
 					// tell truck to receive response
 					truckMessages = theTruck.handleMessage();
@@ -154,9 +165,9 @@ public class TruckRunner {
 
 		public UIThread() {
 		}
-		
+
 		public void run() {
-			HashMap<Integer, String> AIMap = new HashMap<Integer,String>();
+			HashMap<Integer, String> AIMap = new HashMap<Integer, String>();
 			AIMap.put(0, "NEW_TRUCK");
 			AIMap.put(1, "STABILIZING");
 			AIMap.put(2, "STABILIZED");
@@ -167,25 +178,29 @@ public class TruckRunner {
 			AIMap.put(7, "MERGING_CONVOY");
 			DecimalFormat df = new DecimalFormat("0.0");
 			while (true) {
-				//Clear Console on Linux
-				final String ANSI_CLS = "\u001b[2J"; 
-				final String ANSI_HOME = "\u001b[H"; 
-				System.out.print(ANSI_CLS + ANSI_HOME); 
+				// Clear Console on Linux
+				final String ANSI_CLS = "\u001b[2J";
+				final String ANSI_HOME = "\u001b[H";
+				System.out.print(ANSI_CLS + ANSI_HOME);
 				System.out.flush();
-				
+
 				UITickStart = System.nanoTime();
 				System.out.println("===============");
 				System.out.println("Truck:     " + theTruck.getTruckNumber());
-				System.out.println("Pos:       " + df.format(theTruck.getPos()));
-				System.out.println("Speed      " + df.format(theTruck.getSpeed()));
-				System.out.println("Accel:     " + df.format(theTruck.getAcceleration()));
+				System.out
+						.println("Pos:       " + df.format(theTruck.getPos()));
+				System.out.println("Speed      "
+						+ df.format(theTruck.getSpeed()));
+				System.out.println("Accel:     "
+						+ df.format(theTruck.getAcceleration()));
 				System.out.println("Lane:      " + theTruck.getLane());
-				System.out.println("ConvoyID:  " + theTruck.getConvoyID()); 
-		        System.out.println("Order:     " + theTruck.getOrderInConvoy());
-		        System.out.println("AIState:   " + AIMap.get(theTruck.getTruckAIState()));
-		        System.out.println("Maybe 1st? " + theTruck.getProbablyFirst());
+				System.out.println("ConvoyID:  " + theTruck.getConvoyID());
+				System.out.println("Order:     " + theTruck.getOrderInConvoy());
+				System.out.println("AIState:   "
+						+ AIMap.get(theTruck.getTruckAIState()));
+				System.out.println("Maybe 1st? " + theTruck.getProbablyFirst());
 				System.out.println("===============");
-				
+
 				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
 				}
 

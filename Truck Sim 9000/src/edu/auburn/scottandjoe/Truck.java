@@ -47,9 +47,9 @@ public class Truck {
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
-	private static final double SOLO_CATCHING_SPEED = 33.5;
-	private static final double MERGING_CATCHING_SPEED = 33.0;
-	private static final double MULTI_CATCHING_SPEED = 32.4;
+	private static final double SOLO_CATCHING_SPEED = 32.7;
+	private static final double MERGING_CATCHING_SPEED = 32.2;
+	private static final double MULTI_CATCHING_SPEED = 31.7;
 	private static final double MIN_CONVOY_GAP = 10.0;
 	private static final double MAX_CONVOY_GAP = 20.0;
 
@@ -71,7 +71,7 @@ public class Truck {
 
 	// message meta
 	private int sequenceNumber = 1;
-	private int messagesPerSecond = 10;
+	private int messagesPerSecond = 50;
 	private long lastMessageTime = 0l;
 	private static DatagramSocket airUDPSocket;
 
@@ -192,7 +192,7 @@ public class Truck {
 		}
 	}
 
-	private void explode(String reason) throws FatalTruckException {
+	public void explode(String reason) throws FatalTruckException {
 		throw new FatalTruckException(reason);
 	}
 
@@ -353,12 +353,12 @@ public class Truck {
 				}
 			}
 			if (nextTruck != null) {
-				if (nextTruck.getPos() - pos < MAX_CONVOY_GAP - 7) {
+				if (nextTruck.getPos() - pos < MAX_CONVOY_GAP) {
 					// once within acceptable range, become a MULTI_CONVOY
 					truckAIState = MULTI_CONVOY;
 					convoyID = nextTruck.getConvoyID();
 				}
-				if (nextTruck.getPos() - pos > MAX_CONVOY_GAP - 7) {
+				if (nextTruck.getPos() - pos > MAX_CONVOY_GAP) {
 					desiredSpeed = MERGING_CATCHING_SPEED;
 				}
 			}
@@ -378,20 +378,20 @@ public class Truck {
 				nextTruck = truckCache[i];
 			}
 		}
-		if (nextTruck.getPos() - pos < MIN_CONVOY_GAP) {
-			desiredSpeed = desiredSpeed - 0.5;
+		if (nextTruck != null && nextTruck.getPos() - pos < MIN_CONVOY_GAP) {
+			desiredSpeed = desiredSpeed - 0.2;
 		}
-		if (nextTruck.getPos() - pos > MAX_CONVOY_GAP) {
-			desiredSpeed = desiredSpeed + 0.2;
+		if (nextTruck != null && nextTruck.getPos() - pos > MAX_CONVOY_GAP) {
+			desiredSpeed = desiredSpeed + 0.05;
 		}
 		// logic to try to make truck its desired speed by modifying
 		// acceleration
 		if (this.speed < this.desiredSpeed) {
-			if (this.acceleration < MAX_ACCELERATION - 0.2) {
+			if (this.acceleration < MAX_ACCELERATION - 0.1) {
 				if (this.acceleration < 0) {
 					this.acceleration = 0;
 				} else {
-					this.acceleration += 0.1;
+					this.acceleration += 0.03;
 				}
 			}
 		} else {
@@ -399,7 +399,7 @@ public class Truck {
 				if (this.acceleration > 0) {
 					this.acceleration = 0;
 				} else {
-					this.acceleration -= 0.2;
+					this.acceleration -= 0.1;
 				}
 			}
 		}
@@ -407,29 +407,6 @@ public class Truck {
 			acceleration = 0;
 		}
 		
-		//check for collision
-		for (int i = 0; i < truckCache.length; i++) {
-            if (truckInitialized[i] && truckNumber - 1 != i){
-              	if(this.pos > truckCache[i].pos){ //if front is greater than front of other truck
-              		if(this.pos - 25 > truckCache[i].pos){ // then make sure the rear is also greater than the front of other truck
-              			//we're good
-              		}
-              		else{
-              			explode("COLLISION! BOOOM!");
-              		}
-              	}
-              	else if(this.pos < truckCache[i].pos)// else if the front is less then the front of the other truck
-              		if(this.pos < truckCache[i].pos - 25){ // then make sure its front is less then the rear of the other truck
-              			//we're good
-              		}
-              		else{
-              			explode("COLLISION! BOOOM!");
-              		}
-				}
-			}
-		
-		
-
 		// TODO: change lanes if area is clear
 
 	}
@@ -667,8 +644,8 @@ public class Truck {
 					DatagramPacket receivedPacket = new DatagramPacket(
 							receivedData, receivedData.length);
 					airUDPSocket.receive(receivedPacket);
-					System.out.println("[NORMAL] Received packet:"
-							+ new String(receivedPacket.getData()));
+					//System.out.println("[NORMAL] Received packet:"
+					//		+ new String(receivedPacket.getData()));
 					incomingUDPMessages
 							.add(new String(receivedPacket.getData())
 									.split("\n")[0]);

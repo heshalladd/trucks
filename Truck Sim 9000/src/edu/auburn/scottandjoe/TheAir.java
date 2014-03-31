@@ -122,19 +122,10 @@ public class TheAir {
 				while (true) {
 					// retrieve message from the client
 					receivedMessageWhole = in.readLine();
-					//somehow comes out null everytime. WOOHOO
-					if(receivedMessageWhole == null) {
-						receivedMessageWhole = "came out null";
-					}
-					System.out.println(receivedMessageWhole);
 					receivedMessage = receivedMessageWhole.split(",");
 					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
 					int messageTruckNumber = 0;
-					// System.out.println("[DEBUG] Whole Message:" +
-					// receivedMessageWhole);
-					// for(int i = 0; i < receivedMessage.length; i++) {
-					// System.out.println("[DEBUG]" + receivedMessage[i]);
-					// }
+					
 					// scrape truck data for air cache
 					if (receivedMessage.length == 14) {
 						// update sourceAddress in message if it was 0 (unset)
@@ -259,6 +250,30 @@ public class TheAir {
 							}
 						}
 					}
+					
+					//check for collision
+					for (int j = 0; j < theTrucks.length-1; j++) {
+						for (int i = 0; i < theTrucks.length; i++) {
+							if (truckInitialized[i] && truckInitialized[j] && j != i){
+								if(theTrucks[j].getPos() > theTrucks[i].getPos()){
+									if(theTrucks[j].getPos() - 25 > theTrucks[i].getPos()){ 
+										//we're good
+									}
+									else{
+										theTrucks[j].explode("COLLISION! BOOOM!");
+									}
+								}
+								else if(theTrucks[j].getPos() < theTrucks[i].getPos()) {
+									if(theTrucks[j].getPos() < theTrucks[i].getPos() - 25){
+										//we're good
+									}
+									else{
+										theTrucks[j].explode("COLLISION! BOOOM!");
+									}
+								}
+							}
+						}
+					}
 				}
 
 			}
@@ -270,6 +285,15 @@ public class TheAir {
 			} catch (FatalTruckException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
 				e.printStackTrace();
+				PrintWriter out;
+				try {
+					out = new PrintWriter(new BufferedWriter(
+							new OutputStreamWriter(socket.getOutputStream())),
+							true);
+					out.println("crash");
+				} catch (IOException e1) {
+				}
+				System.exit(99);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -346,7 +370,7 @@ public class TheAir {
 
 				// Display truck info (position, speed, acceleration, lane,
 				// total messages)
-				System.out.println("TRUCK     POS     SPEED     ACC     LANE");
+				System.out.println("TRUCK     POS            SPEED      ACC      LANE");
 				for (Truck truck : truckList) {
 					System.out.println("  " + truck.getTruckNumber()
 							+ "       " + df.format(truck.getPos())
@@ -355,8 +379,7 @@ public class TheAir {
 							+ "        " + truck.getLane());
 				}
 				
-				//debug 1.0 to 999999
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (999999.0 / (double) UITickRate)) {
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (1.0 / (double) UITickRate)) {
 				}
 
 			}
