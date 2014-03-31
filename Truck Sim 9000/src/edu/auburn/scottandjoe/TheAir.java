@@ -11,6 +11,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -148,7 +149,7 @@ public class TheAir {
 					// scrape truck data for air cache
 					int messageTruckNumber = Integer.decode(receivedMessage[7]);
 					totalMessages[messageTruckNumber - 1]++;
-					if (truckInitialized[messageTruckNumber - 1]) {
+					if (truckInitialized[messageTruckNumber - 1] && receivedMessage.length == 14) {
 						theTrucks[messageTruckNumber - 1]
 								.setSequenceNumber(Integer
 										.decode(receivedMessage[0]));
@@ -172,7 +173,7 @@ public class TheAir {
 						theTrucks[messageTruckNumber - 1]
 								.setOrderInConvoy(Integer
 										.decode(receivedMessage[12]));
-					} else {
+					} else if(receivedMessage.length == 14){
 						// add address of truck to air cache of truck addresses
 						// and ports
 						truckAddresses[messageTruckNumber - 1] = socket
@@ -269,8 +270,6 @@ public class TheAir {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
 				e.printStackTrace();
 			} catch (NumberFormatException e) {
-				System.out.println("[SEVERE] Error in Request Handler:" + e);
-				e.printStackTrace();
 			} catch (FatalTruckException e) {
 				System.out.println("[SEVERE] Error in Request Handler:" + e);
 				e.printStackTrace();
@@ -309,17 +308,20 @@ public class TheAir {
 			// 4 440 55 2 1
 			// 5 550 66 4 1
 
+			DecimalFormat df = new DecimalFormat("#.0");
 			while (true) {
-				final String ANSI_CLS = "\u001b[2J"; 
-				final String ANSI_HOME = "\u001b[H"; 
-				System.out.print(ANSI_CLS + ANSI_HOME); 
-				System.out.flush();
+				//final String ANSI_CLS = "\u001b[2J"; 
+				//final String ANSI_HOME = "\u001b[H"; 
+				//System.out.print(ANSI_CLS + ANSI_HOME); 
+				//System.out.flush();
+				
 				UITickStart = System.nanoTime();
+				
 				// Prepare the ArrayList for sorting
 				ArrayList<Truck> truckList = new ArrayList<Truck>();
 				for (int i = 0; i < totalTrucks; i++) {
 					if (truckInitialized[i]) { // make sure you only display
-												// trucks that have been
+												// trucks that have been initialized
 						truckList.add(theTrucks[i]);
 					}
 				}
@@ -338,7 +340,7 @@ public class TheAir {
 						.println("_______________________________________________________");
 				for (Truck truck : truckList) {
 					System.out.print("-[" + truck.getTruckNumber() + ":"
-							+ truck.getPos() + "]-");
+							+ df.format(truck.getPos()) + "]-");
 				}
 				System.out.println();
 				System.out
@@ -351,13 +353,13 @@ public class TheAir {
 					if (truckInitialized[i]) { // make sure you only display
 												// trucks that have been
 						System.out.println("  " + theTrucks[i].getTruckNumber()
-								+ "       " + theTrucks[i].getPos()
-								+ "        " + theTrucks[i].getSpeed()
-								+ "       " + theTrucks[i].getAcceleration()
+								+ "       " + df.format(theTrucks[i].getPos())
+								+ "        " + df.format(theTrucks[i].getSpeed())
+								+ "       " + df.format(theTrucks[i].getAcceleration())
 								+ "        " + theTrucks[i].getLane());
 					}
 				}
-				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
+				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (10.0 / (double) UITickRate)) {
 				}
 
 			}

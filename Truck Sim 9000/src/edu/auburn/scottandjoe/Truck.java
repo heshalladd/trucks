@@ -16,7 +16,7 @@ public class Truck {
 	// physical constraints constants
 	public static final double MAX_ACCELERATION = 1.0;
 	public static final double MIN_ACCELERATION = -3.0;
-	public static final int MAX_LANE = 2;
+	public static final int MAX_LANE = 1;
 	public static final int MIN_LANE = 1;
 	public static final double truckLength = 25.0;
 	// 80mph is 35.7m/s
