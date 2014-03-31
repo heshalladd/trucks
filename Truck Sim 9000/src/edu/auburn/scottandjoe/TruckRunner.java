@@ -135,6 +135,10 @@ public class TruckRunner {
 			} catch (IOException e) {
 				System.out
 						.println("[SEVERE] IOException in thread that handles message handoff.");
+			} catch (NumberFormatException e) {
+				e.printStackTrace();
+			} catch (FatalTruckException e) {
+				e.printStackTrace();
 			}
 		}
 	}
