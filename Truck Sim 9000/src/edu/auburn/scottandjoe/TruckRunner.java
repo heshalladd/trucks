@@ -10,6 +10,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class TruckRunner {
 	private static int tickRate = TheAir.TICK_RATE;
@@ -53,13 +55,14 @@ public class TruckRunner {
 				try {
 					// wait for start
 					startMessage = "";
-					BufferedReader in = new BufferedReader(new InputStreamReader(airTCPSock.getInputStream()));
+					BufferedReader in = new BufferedReader(
+							new InputStreamReader(airTCPSock.getInputStream()));
 					while (!startMessage.equals("start")) {
-						
+
 						startMessage = in.readLine();
 					}
 					in.close();
-					
+
 					// start a listener for the restart signal
 					new RestartListener(airTCPSock).start();
 					// start thread for doing message handoffs to air, and also
@@ -141,6 +144,43 @@ public class TruckRunner {
 				e.printStackTrace();
 			}
 		}
+	}
+
+	private class UIThread extends Thread {
+		private int newLane;
+		long UITickStart = 0l;
+		int UITickRate = TheAir.TICK_RATE;
+
+		public UIThread() {
+		}
+
+		public void run() {
+			while (true) {
+				UITickStart = System.nanoTime();
+				System.out.println("TRUCK     POS     SPEED     ACC     LANE");
+				System.out.println("  " + theTruck.getTruckNumber() + "       "
+						+ theTruck.getPos() + "        " + theTruck.getSpeed()
+						+ "       " + theTruck.getAcceleration() + "        "
+						+ theTruck.getLane());
+
+				// Clear the console (may be different depending on OS)
+
+				try {
+					Runtime.getRuntime().exec("clear");
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}// for mac
+				// Runtime.getRuntime().exec("cls"); // for windows
+
+				while (((System.nanoTime() - UITickStart) / 1000000) < (1 / UITickStart)) {
+				}
+
+			}
+			// TODO: busy wait for ui thread tick to finish
+		}
+
+		// merge test
 	}
 
 }
