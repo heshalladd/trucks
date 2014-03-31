@@ -357,7 +357,7 @@ public class TheAir {
 			// 4 440 55 2 1
 			// 5 550 66 4 1
 
-			DecimalFormat df = new DecimalFormat("0.0");
+			DecimalFormat df = new DecimalFormat("#0.0");
 			while (true) {
 				final String ANSI_CLS = "\u001b[2J";
 				final String ANSI_HOME = "\u001b[H";
@@ -386,6 +386,8 @@ public class TheAir {
 				});
 
 				// Print RoadView
+				System.out.println("=======================================================");
+				System.out.println("+THE AIR+");
 				System.out
 						.println("_______________________________________________________");
 				for (Truck truck : truckList) {
@@ -407,7 +409,7 @@ public class TheAir {
 							+ "       " + df.format(truck.getAcceleration())
 							+ "        " + truck.getLane());
 				}
-
+				System.out.println("=======================================================");
 				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (1.0 / (double) UITickRate)) {
 				}
 

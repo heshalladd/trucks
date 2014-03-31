@@ -172,7 +172,7 @@ public class TruckRunner {
 			AIMap.put(5, "FULL_CONVOY");
 			AIMap.put(6, "COLLIDED");
 			AIMap.put(7, "MERGING_CONVOY");
-			DecimalFormat df = new DecimalFormat("0.0");
+			DecimalFormat df = new DecimalFormat("#0.00");
 			while (true) {
 				// Clear Console on Linux
 				final String ANSI_CLS = "\u001b[2J";
@@ -181,21 +181,22 @@ public class TruckRunner {
 				System.out.flush();
 
 				UITickStart = System.nanoTime();
-				System.out.println("===============");
-				System.out.println("Truck:     " + theTruck.getTruckNumber());
-				System.out
-						.println("Pos:       " + df.format(theTruck.getPos()));
-				System.out.println("Speed      "
+				System.out.println("===========================");
+				System.out.println("Truck:         " + theTruck.getTruckNumber());
+				System.out.println("Pos:           " + df.format(theTruck.getPos()));
+				System.out.println("Next Trk Pos:  " + df.format(theTruck.getNextTruckPos()));
+				System.out.println("next Trk Dist: " + df.format(theTruck.getNextTruckPos() - theTruck.getPos()));
+				System.out.println("Speed          "
 						+ df.format(theTruck.getSpeed()));
-				System.out.println("Accel:     "
+				System.out.println("Accel:         "
 						+ df.format(theTruck.getAcceleration()));
-				System.out.println("Lane:      " + theTruck.getLane());
-				System.out.println("ConvoyID:  " + theTruck.getConvoyID());
-				System.out.println("Order:     " + theTruck.getOrderInConvoy());
-				System.out.println("AIState:   "
+				System.out.println("Lane:          " + theTruck.getLane());
+				System.out.println("ConvoyID:      " + theTruck.getConvoyID());
+				System.out.println("Order:         " + theTruck.getOrderInConvoy());
+				System.out.println("AIState:       "
 						+ AIMap.get(theTruck.getTruckAIState()));
-				System.out.println("Maybe 1st? " + theTruck.getProbablyFirst());
-				System.out.println("===============");
+				System.out.println("Am I 1st?:     " + theTruck.getProbablyFirst());
+				System.out.println("===========================");
 
 				while (((System.nanoTime() - UITickStart) / 1000000000.0) < (2.0 / (double) UITickRate)) {
 				}
