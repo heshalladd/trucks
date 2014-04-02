@@ -15,7 +15,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 
-public class TruckRunner {
+public class TruckDriver {
 	private static int tickRate = TheAir.TICK_RATE;
 	private static boolean started = false;
 	private static String startMessage = "";

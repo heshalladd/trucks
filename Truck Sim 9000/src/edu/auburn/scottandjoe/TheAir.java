@@ -408,8 +408,7 @@ public class TheAir {
 							+ df.format(truck.getPos()) + "]-");
 				}
 				System.out.println();
-				System.out
-						.println("_______________________________________________________");
+				System.out.println("_______________________________________________________");
 
 				// Display truck info (position, speed, acceleration, lane,
 				// total messages)
