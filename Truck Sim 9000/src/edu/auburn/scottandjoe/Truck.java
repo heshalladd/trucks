@@ -10,6 +10,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class Truck {
+	//TODO: General: track last status update time for each truck. Disregard stale statuses for collision checks to prevent crashes with "phantoms"
+	//TODO: Alternate: always send air all new tcp messages so that the air can do the collision detection. Allow air to predict positions to make up for "phantom" collisions caused small discrepancies between two trucks update signals
+	
 	// physical constraints constants
 	public static final double MAX_ACCELERATION = 1.0;
 	public static final double MIN_ACCELERATION = -3.0;
@@ -53,7 +56,6 @@ public class Truck {
 	private int desiredPlaceInConvoy;
 	private int orderInConvoy = 1; // 1 will signify leader of convoy
 	private int truckAIState = NEW_TRUCK;
-	private int stabilizingCountdown = 0;
 	private int messagesForwarded = 0;
 	private int messagesDropped = 0;
 	private double desiredSpeed;
@@ -211,6 +213,12 @@ public class Truck {
 			changingLanes = true;
 		}
 		
+		checkForCollision();
+		
+		return 1;
+	}
+
+	public void checkForCollision() throws FatalTruckException{
 		// check for collision
 				for (int j = 0; j < truckCache.length - 1; j++) {
 					for (int i = 0; i < truckCache.length; i++) {
@@ -242,11 +250,9 @@ public class Truck {
 						}
 					}
 				}
-
-		return 1;
 	}
-
-	public void updateMental() throws FatalTruckException {
+	
+	public void updateDesires() throws FatalTruckException {
 
 	}
 
