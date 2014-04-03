@@ -18,7 +18,7 @@ public class Truck {
 	public static final double MIN_ACCELERATION = -3.0;
 	public static final int MAX_LANE = 1;
 	public static final int MIN_LANE = 1;
-	public static final double truckLength = 25.0;
+	public static final double TRUCK_LENGTH = 25.0;
 	// 80mph is 35.7m/s
 	public static final double MAX_REASONABLE_SPEED = 35.7;
 	// 55mph is 24.6m/s
@@ -28,26 +28,6 @@ public class Truck {
 	public static final int RANDOMIZE_INT = -10000;
 	public static final double RANDOMIZE_DOUBLE = -10000.0;
 
-	// truck state magic number constants
-	// ai states:
-	// 0 - new truck object. has had no thoughts
-	// 1 - just started, is waiting minimum time for all trucks to stabilize
-	// speed
-	// 2 - speeds initially stabilized
-	// 3 - in solo convoy and seeking others
-	// 4 - in a multi convoy and seeking others
-	// 5 - in a full convoy
-	// 6 - collided
-	// 7 - merging convoy(trying to join the convoy in front of it)
-	public static final int NEW_TRUCK = 0;
-	public static final int STABILIZING = 1;
-	public static final int STABILIZED = 2;
-	public static final int SOLO_CONVOY = 3;
-	public static final int MULTI_CONVOY = 4;
-	public static final int FULL_CONVOY = 5;
-	public static final int COLLIDED = 6;
-	public static final int MERGING_CONVOY = 7;
-
 	// tick rate taken from the air
 	private int tickRate = TheAir.TICK_RATE;
 
@@ -55,16 +35,14 @@ public class Truck {
 	private int desiredLane;
 	private int desiredPlaceInConvoy;
 	private int orderInConvoy = 1; // 1 will signify leader of convoy
-	private int truckAIState = NEW_TRUCK;
 	private int messagesForwarded = 0;
 	private int messagesDropped = 0;
-	private double desiredSpeed;
-	private double startPos;
 	private String convoyID = UUID.randomUUID().toString(); // id of convoy
 	private String lastMessageToForward = "";
 	private static ConcurrentLinkedQueue<String> incomingUDPMessages = new ConcurrentLinkedQueue<String>();
 	private boolean changingLanes = false;
 	private boolean probablyFirst = false;
+	private TruckAI theAI = new TruckAI();
 
 	// message meta
 	private int sequenceNumber = 1;
@@ -442,7 +420,11 @@ public class Truck {
 		}
 		return size;
 	}
-
+	
+	public int getTruckAIState() {
+		return this.theAI.getAIState();
+	}
+	
 	public String getLastMessageToForward()
 	{
 		return lastMessageToForward;
@@ -454,10 +436,6 @@ public class Truck {
 
 	public boolean[] getTruckInitialized() {
 		return truckInitialized;
-	}
-
-	public int getTruckAIState() {
-		return this.truckAIState;
 	}
 
 	// set messages per second
