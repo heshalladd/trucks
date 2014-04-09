@@ -3,6 +3,7 @@ package edu.auburn.scottandjoe;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -202,6 +203,62 @@ public class Truck {
 		}
 	}
 
+	public void checkIfInRange() {
+		//TODO: adapt this method
+		// determine whether those messages are going to make it
+		// through
+		if (trucksInRange.size() > 0) {
+			for (int i = 0; i < trucksInRange.size(); i++) {
+				double chanceToSend = 0.0;
+				double distanceApart = Math
+						.abs(theTrucks[messageTruckNumber - 1]
+								.getPos()
+								- trucksInRange.get(i).getPos());
+				// piecewise equation for determining
+				// transmission
+				// probability
+				if (distanceApart < 70) {
+					chanceToSend = -0.002142857 * distanceApart
+							+ 1;
+				} else if (distanceApart >= 70
+						&& distanceApart < 100) {
+					chanceToSend = -(0.00094 * Math.pow(
+							distanceApart - 70, 2)) + 0.85;
+				} else if (distanceApart >= 100) {
+					chanceToSend = 0.0;
+				}
+
+				// roll the dice
+				Random rand = new Random();
+				if (chanceToSend >= rand.nextDouble()) {
+					byte[] outBoundPacketBuf = new byte[4028];
+					outBoundPacketBuf = receivedMessageWhole
+							.getBytes();
+
+					// get address and port for sending stuff
+					// via
+					// UDP.
+					DatagramSocket forwardUDPSock = new DatagramSocket();
+					InetAddress truckDestination = InetAddress
+							.getByName(truckAddresses[trucksInRange
+									.get(i).getTruckNumber() - 1]);
+					DatagramPacket outBoundUDPPacket = new DatagramPacket(
+							outBoundPacketBuf,
+							outBoundPacketBuf.length,
+							truckDestination, port);
+
+					// forward transmissions (that qualify) to
+					// their
+					// hosts as UDP.
+					forwardUDPSock.send(outBoundUDPPacket);
+
+					// close socket
+					forwardUDPSock.close();
+				}
+			}
+		}
+	}
+	
 	public String createCSVMessage(int previousHop, int sourcePort,
 			String sourceAddress) {
 		String message = "" + sequenceNumber + "," + sourceAddress + ","
