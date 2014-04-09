@@ -58,7 +58,7 @@ public class TruckAI {
 		return this.truckAIState;
 	}
 	
-	public void dummyMethod() {
+	public void doAI() {
 		// switch statement to enter state logic
 		switch (truckAIState) {
 		case NEW_TRUCK:

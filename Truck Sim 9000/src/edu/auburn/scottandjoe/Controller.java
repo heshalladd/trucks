@@ -17,50 +17,22 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Random;
 
-import edu.auburn.scottandjoe.Truck;
+public class Controller {
 
-public class TheAir {
-
-	public static final int TICK_RATE = 10;
-
-	public static Truck[] theTrucks = new Truck[5];
-	public static int totalTrucks = 0;
-	public static int[] totalMessages = new int[5];
-	public static int sequenceCache[] = new int[5];
-	public static int totalMalformedPackets = 0;
-	public static int port;
-	public static int totalForwardedPackets = 0;
-	public static String[] truckAddresses = new String[5];
-	public static String lastMalformedPacket = "";
-	public static boolean start = false;
+	private static int totalTrucks = 0;
+	private static boolean start = false;
 	public static boolean collision = false;
-	public static boolean[] truckInitialized = new boolean[5]; // will
-																// initialize to
-																// false
-																// (desired)
-
-	/**
-	 * @param args
-	 */
+	public static String[] truckAddresses = new String[5];
+	
+	
 	public static void main(String[] args) {
-		System.out.println("[NORMAL] Launching \"The Air\"");
+		System.out.println("[NORMAL] Launching the controller.");
 
-		port = 0;
-		if (args.length == 0) {
-			System.out
-					.println("[SEVERE] Error: Please specify a port in the command line.");
-			System.exit(0);
-		}
-		if (Integer.decode(args[0]) >= 1 && Integer.decode(args[0]) <= 65535) {
-			port = Integer.decode(args[0]);
-			System.out.println("[NORMAL] Status: Port successfully selected ("
-					+ port + ")");
-		} else {
-			System.out
-					.println("[SEVERE] Error in args: Invalid port number. Must be between 1 and 65535.");
-			System.exit(0);
-		}
+		int port;
+		port = parsePortFromArgs(args);
+
 		System.out.println("[NORMAL] Status: Running.");
+
 		ServerSocket server = null;
 		try {
 			server = new ServerSocket(port);
@@ -68,6 +40,7 @@ public class TheAir {
 			System.out.println("[SEVERE] Failed to open server socket.");
 			System.exit(0);
 		}
+
 		while (true) {
 			try {
 				System.out.println("[NORMAL] Status: Waiting for connections.");
@@ -94,6 +67,27 @@ public class TheAir {
 				}
 			}
 		}
+
+	}
+
+	private static int parsePortFromArgs(String[] arguments) {
+		int port = 0;
+		if (arguments.length == 0) {
+			System.out
+					.println("[SEVERE] Error: Please specify a port in the command line.");
+			System.exit(0);
+		}
+		if (Integer.decode(arguments[0]) >= 1
+				&& Integer.decode(arguments[0]) <= 65535) {
+			port = Integer.decode(arguments[0]);
+			System.out.println("[NORMAL] Status: Port successfully selected ("
+					+ port + ")");
+		} else {
+			System.out
+					.println("[SEVERE] Error in args: Invalid port number. Must be between 1 and 65535.");
+			System.exit(0);
+		}
+		return port;
 	}
 
 	private static class MessageHandler extends Thread {
@@ -121,8 +115,6 @@ public class TheAir {
 							true);
 					out.println("start");
 				}
-				// spawn ui thread (for displaying stuff)
-				new UIThread().start();
 
 				while (true) {
 					if (collision) {
@@ -155,14 +147,16 @@ public class TheAir {
 									.split("/")[1].split(":")[0];
 						}
 						messageTruckNumber = Integer.decode(receivedMessage[7]);
-						messageSequenceNumber = Integer.decode(receivedMessage[0]);
+						messageSequenceNumber = Integer
+								.decode(receivedMessage[0]);
 						previousHop = Integer.decode(receivedMessage[3]);
-						if(previousHop != messageTruckNumber){
+						if (previousHop != messageTruckNumber) {
 							totalForwardedPackets++;
 						}
 						totalMessages[previousHop - 1]++;
 						if (truckInitialized[messageTruckNumber - 1]
-								&& receivedMessage.length >= 14 && sequenceCache[messageTruckNumber - 1] < messageSequenceNumber) {
+								&& receivedMessage.length >= 14
+								&& sequenceCache[messageTruckNumber - 1] < messageSequenceNumber) {
 							sequenceCache[messageTruckNumber - 1] = messageSequenceNumber;
 							theTrucks[messageTruckNumber - 1]
 									.setSequenceNumber(Integer
@@ -221,8 +215,7 @@ public class TheAir {
 
 						// determine who the broadcast is in range of
 						for (int i = 0; i < theTrucks.length; i++) {
-							if (i != previousHop - 1
-									&& truckInitialized[i]) {
+							if (i != previousHop - 1 && truckInitialized[i]) {
 								trucksInRange.add(theTrucks[i]);
 							}
 						}
@@ -291,9 +284,10 @@ public class TheAir {
 										// we're good
 									} else {
 										System.out.println("[COLLISION] Truck "
-												+ (j + 1) + " ran into  Truck " + (i + 1)
-												+ "!");
-										theTrucks[j].explode("COLLISION! BOOOM!");
+												+ (j + 1) + " ran into  Truck "
+												+ (i + 1) + "!");
+										theTrucks[j]
+												.explode("COLLISION! BOOOM!");
 									}
 								} else if (theTrucks[j].getPos() < theTrucks[i]
 										.getPos()) {
@@ -302,9 +296,10 @@ public class TheAir {
 										// we're good
 									} else {
 										System.out.println("[COLLISION] Truck "
-												+ (i + 1) + " ran into  Truck " + (j + 1)
-												+ "!");
-										theTrucks[j].explode("COLLISION! BOOOM!");
+												+ (i + 1) + " ran into  Truck "
+												+ (j + 1) + "!");
+										theTrucks[j]
+												.explode("COLLISION! BOOOM!");
 									}
 								}
 							}
@@ -350,7 +345,8 @@ public class TheAir {
 		}
 
 	}
-
+	
+	
 	private static class UIThread extends Thread {
 		long UITickStart = 0l;
 		int UITickRate = 1;
