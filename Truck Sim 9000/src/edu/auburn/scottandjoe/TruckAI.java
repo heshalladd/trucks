@@ -4,9 +4,12 @@ public class TruckAI {
 	// imported constants
 	private static final double MAX_ACCELERATION = Truck.MAX_ACCELERATION;
 	private static final double MIN_ACCELERATION = Truck.MIN_ACCELERATION;
+	private static final double MAX_REASONABLE_SPEED = Truck.MAX_REASONABLE_SPEED;
+	private static final double MIN_REASONABLE_SPEED = Truck.MIN_REASONABLE_SPEED;
 	private static final int MAX_LANE = Truck.MIN_LANE;
 	private static final int MIN_LANE = Truck.MAX_LANE;
 	private static final double TRUCK_LENGTH = Truck.TRUCK_LENGTH;
+	private static final int TICK_RATE = Controller.TICK_RATE;
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
@@ -39,45 +42,53 @@ public class TruckAI {
 	// ai variables
 	private int stabilizingCountdown = 0;
 	private double desiredSpeed;
+
 	private double startPos;
 	private int truckAIState = NEW_TRUCK;
 
-	// TODO: a method that accepts a clone of a truck (avoids race conditions)
-	// and does ai work
-	// TODO: a method for returning new desired speed
-	// TODO: a method for returning new acceleration
-	// TODO: a method for returning new convoy id
-	// TODO: a method for returning new convoy position
+	// always call doAI after you have handled messages for this tick in order
+	// to avoid race conditions and inaccurate calculations for distances.
+	// TODO: a method for returning new desired speed (no need, just do setters)
+	// TODO: a method for returning new acceleration (no need, just do setters)
+	// TODO: a method for returning new convoy id (no need, just do setters)
+	// TODO: a method for returning new convoy position (no need, just do
+	// setters)
 	// TODO: continue coming up with TODO's for this class.
-	
+
 	public TruckAI() {
-		//TODO: initialize ai stuff
+		// TODO: initialize ai stuff
 	}
 
 	public int getAIState() {
 		return this.truckAIState;
 	}
-	
-	public void doAI() {
+
+	public void doAI(Truck theTruck) {
+		// grab truck cache and truck initialized cache for less ugly code
+		// NOTE: MAKE SURE YOU ONLY USE GETTERS ON THESE. CHANGES ARE NOT
+		// GUARANTEED TO BE KEPT BY THE TRUCK THAT CALLED THIS
+		Truck[] truckCache = theTruck.getTruckCache();
+		boolean[] truckInitialized = theTruck.getTruckInitialized();
+
 		// switch statement to enter state logic
 		switch (truckAIState) {
 		case NEW_TRUCK:
 			// save initial stuff for later calculation purposes
-			startPos = pos;
-			desiredSpeed = speed;
+			startPos = theTruck.getPos();
+			desiredSpeed = theTruck.getSpeed();
 			// predict approximate position relative to other trucks based on
 			// start pos
 			if (startPos <= 270) {
-				probablyFirst = false;
+				theTruck.setProbablyFirst(false);
 			}
 			if (startPos > 270) {
-				probablyFirst = true;
+				theTruck.setProbablyFirst(true);
 			}
 
 			// set desired speed to stabilizing speed
 			desiredSpeed = STABILIZING_SPEED;
 			// start stabilizing countdown timer using tick rate for reference
-			stabilizingCountdown = (int) (tickRate * Math.ceil(Math.max(
+			stabilizingCountdown = (int) (TICK_RATE * Math.ceil(Math.max(
 					MAX_REASONABLE_SPEED - STABILIZING_SPEED, STABILIZING_SPEED
 							- MIN_REASONABLE_SPEED)
 					/ Math.min(MAX_ACCELERATION, MIN_ACCELERATION)));
@@ -108,16 +119,18 @@ public class TruckAI {
 		case SOLO_CONVOY:
 			// if there is a truck in this convoy with position 5, become full
 			// convoy
-			if (getConvoySize() == 5) {
+			if (theTruck.getConvoySize() == 5) {
 				truckAIState = FULL_CONVOY;
 			}
 			// search for a truck ahead
 			for (int i = 0; i < truckCache.length; i++) {
 				// NOTE: this biases forward merging
-				if (truckInitialized[i] && truckNumber - 1 != i
-						&& truckCache[i].getPos() > pos
-						&& !truckCache[i].getConvoyID().equals(convoyID)
-						&& truckCache[i].getLane() == lane) {
+				if (truckInitialized[i]
+						&& theTruck.getTruckNumber() - 1 != i
+						&& truckCache[i].getPos() > theTruck.getPos()
+						&& !truckCache[i].getConvoyID().equals(
+								theTruck.getConvoyID())
+						&& truckCache[i].getLane() == theTruck.getLane()) {
 					// if a truck has been found ahead, change to merging convoy
 					// and join the convoy ahead
 					truckAIState = MERGING_CONVOY;
@@ -164,7 +177,7 @@ public class TruckAI {
 						&& truckCache[i].getPos() > pos
 						&& !truckCache[i].getConvoyID().equals(convoyID)
 						&& truckCache[i].getPos() - pos > MAX_CONVOY_GAP
-								+ truckLength
+								+ TRUCK_LENGTH
 						&& truckCache[i].getLane() == lane) {
 					truckAIState = SOLO_CONVOY;
 					break;
@@ -200,7 +213,7 @@ public class TruckAI {
 			if (nextTruck != null) {
 				convoyID = nextTruck.getConvoyID();
 				orderInConvoy = nextTruck.getOrderInConvoy() + 1;
-				if (nextTruck.getPos() - pos < MAX_CONVOY_GAP + truckLength) {
+				if (nextTruck.getPos() - pos < MAX_CONVOY_GAP + TRUCK_LENGTH) {
 					// once within acceptable range, become a MULTI_CONVOY
 					truckAIState = MULTI_CONVOY;
 					desiredSpeed = STABILIZING_SPEED;
@@ -226,18 +239,18 @@ public class TruckAI {
 			}
 		}
 		if (nextTruck != null
-				&& nextTruck.getPos() - pos < MIN_CONVOY_GAP + truckLength
+				&& nextTruck.getPos() - pos < MIN_CONVOY_GAP + TRUCK_LENGTH
 				&& desiredSpeed > MIN_REASONABLE_SPEED) {
 			desiredSpeed = desiredSpeed - 0.15;
 		}
 		if (nextTruck != null
-				&& nextTruck.getPos() - pos > MAX_CONVOY_GAP + truckLength
+				&& nextTruck.getPos() - pos > MAX_CONVOY_GAP + TRUCK_LENGTH
 				&& desiredSpeed < CATCHING_SPEED) {
 			desiredSpeed = desiredSpeed + 0.05;
 		}
 		if (nextTruck != null
-				&& nextTruck.getPos() - pos > MIN_CONVOY_GAP + truckLength
-				&& nextTruck.getPos() - pos < MAX_CONVOY_GAP + truckLength) {
+				&& nextTruck.getPos() - pos > MIN_CONVOY_GAP + TRUCK_LENGTH
+				&& nextTruck.getPos() - pos < MAX_CONVOY_GAP + TRUCK_LENGTH) {
 			desiredSpeed = STABILIZING_SPEED;
 		}
 		if (nextTruck != null && nextTruck.getPos() - pos < 40) {

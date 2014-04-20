@@ -11,13 +11,14 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Controller {
-	public static final int TICK_RATE = 10;
+	public static final int TICK_RATE = 30;
 
 	private static int totalTrucks = 0;
 	private static boolean allTrucksConnected = false;
 	private static boolean runSimulation = false;
 	private static boolean collision = false;
 	private static String[] truckAddresses = new String[5];
+	private static boolean[] collisionForTruck = new boolean[5];
 
 	public static void main(String[] args) {
 		System.out.println("[NORMAL] Launching the controller.");
@@ -37,9 +38,9 @@ public class Controller {
 			System.out.println("[SEVERE] Failed to open server socket.");
 			System.exit(0);
 		}
+		try {
+			while (true) {
 
-		while (true) {
-			try {
 				System.out.println("[NORMAL] Status: Waiting for connections.");
 				while (true) {
 					// spawn new thread to handle each connection to allow for
@@ -54,14 +55,14 @@ public class Controller {
 						allTrucksConnected = true;
 					}
 				}
+			}
+		} catch (IOException e) {
+			System.out
+					.println("[SEVERE] IOException in handling new connection.");
+		} finally {
+			try {
+				server.close();
 			} catch (IOException e) {
-				System.out
-						.println("[SEVERE] IOException in handling new connection.");
-			} finally {
-				try {
-					server.close();
-				} catch (IOException e) {
-				}
 			}
 		}
 
@@ -105,7 +106,10 @@ public class Controller {
 				truckAddresses[truckNumber - 1] = socket
 						.getRemoteSocketAddress().toString().split("/")[1]
 						.split(":")[0];
+				// TODO: wait for all trucks to connect, then send all of the
+				// addresses out.
 
+				// enter the loopable portion of handling trucks
 				while (true) {
 					while (!runSimulation) {
 						Thread.sleep(10);
@@ -119,13 +123,22 @@ public class Controller {
 					out.println("start");
 
 					// listen to this threads truck connection for a collision
+					// also respond with the status of the simulation
 					while (runSimulation) {
 						receivedMessage = in.readLine();
+						String statusMessage = "ok";
 						if (receivedMessage.equals("collision")) {
 							collision = true;
 							runSimulation = false;
-							out.println("collision");
+							collisionForTruck[truckNumber - 1] = true;
+							statusMessage = "collision";
 						}
+
+						if (collision && !collisionForTruck[truckNumber - 1]) {
+							statusMessage = "collision";
+						}
+
+						out.println(statusMessage);
 					}
 					System.out
 							.println("[SEVERE] Something bad happened to one of the trucks.");
@@ -189,6 +202,9 @@ public class Controller {
 				if (userInput.equals("start")) {
 					collision = false;
 					runSimulation = true;
+					for (int i = 0; i < collisionForTruck.length; i++) {
+						collisionForTruck[i] = false;
+					}
 					break;
 				}
 			}

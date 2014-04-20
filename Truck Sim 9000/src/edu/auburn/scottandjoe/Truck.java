@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class Truck {
+	// TODO: add method to stop all threads.
 	// TODO: General: track last status update time for each truck. Disregard
 	// stale statuses for collision checks to prevent crashes with "phantoms"
 	// TODO: Alternate: always send air all new tcp messages so that the air can
@@ -35,7 +36,7 @@ public class Truck {
 
 	public static final double RANDOMIZE_DOUBLE = -10000.0;
 	// tick rate taken from the air
-	private int tickRate = TheAir.TICK_RATE;
+	private static final int TICK_RATE = Controller.TICK_RATE;
 	// truck meta and ai related variables
 	private int desiredLane;
 	private int desiredPlaceInConvoy;
@@ -67,8 +68,8 @@ public class Truck {
 	private boolean intentChangeLane = false;
 	// caching
 	private Truck[] truckCache = new Truck[5];
-
 	private int[] truckSequenceCache = new int[5];
+	private String[] truckAddresses = new String[5];
 
 	public static boolean[] truckInitialized = new boolean[5]; // will
 																// initialize to
@@ -164,7 +165,7 @@ public class Truck {
 		if (acceleration <= MAX_ACCELERATION
 				&& acceleration >= MIN_ACCELERATION) {
 			// accelerate relative to tick rate
-			this.speed = this.speed + (this.acceleration / (double) tickRate);
+			this.speed = this.speed + (this.acceleration / (double) TICK_RATE);
 		} else {
 			System.out
 					.println("[SEVERE] Truck "
@@ -204,26 +205,22 @@ public class Truck {
 	}
 
 	public void checkIfInRange() {
-		//TODO: adapt this method
+		// TODO: adapt this method
 		// determine whether those messages are going to make it
 		// through
 		if (trucksInRange.size() > 0) {
 			for (int i = 0; i < trucksInRange.size(); i++) {
 				double chanceToSend = 0.0;
 				double distanceApart = Math
-						.abs(theTrucks[messageTruckNumber - 1]
-								.getPos()
+						.abs(theTrucks[messageTruckNumber - 1].getPos()
 								- trucksInRange.get(i).getPos());
 				// piecewise equation for determining
 				// transmission
 				// probability
 				if (distanceApart < 70) {
-					chanceToSend = -0.002142857 * distanceApart
-							+ 1;
-				} else if (distanceApart >= 70
-						&& distanceApart < 100) {
-					chanceToSend = -(0.00094 * Math.pow(
-							distanceApart - 70, 2)) + 0.85;
+					chanceToSend = -0.002142857 * distanceApart + 1;
+				} else if (distanceApart >= 70 && distanceApart < 100) {
+					chanceToSend = -(0.00094 * Math.pow(distanceApart - 70, 2)) + 0.85;
 				} else if (distanceApart >= 100) {
 					chanceToSend = 0.0;
 				}
@@ -232,19 +229,17 @@ public class Truck {
 				Random rand = new Random();
 				if (chanceToSend >= rand.nextDouble()) {
 					byte[] outBoundPacketBuf = new byte[4028];
-					outBoundPacketBuf = receivedMessageWhole
-							.getBytes();
+					outBoundPacketBuf = receivedMessageWhole.getBytes();
 
 					// get address and port for sending stuff
 					// via
 					// UDP.
 					DatagramSocket forwardUDPSock = new DatagramSocket();
 					InetAddress truckDestination = InetAddress
-							.getByName(truckAddresses[trucksInRange
-									.get(i).getTruckNumber() - 1]);
+							.getByName(truckAddresses[trucksInRange.get(i)
+									.getTruckNumber() - 1]);
 					DatagramPacket outBoundUDPPacket = new DatagramPacket(
-							outBoundPacketBuf,
-							outBoundPacketBuf.length,
+							outBoundPacketBuf, outBoundPacketBuf.length,
 							truckDestination, port);
 
 					// forward transmissions (that qualify) to
@@ -258,7 +253,7 @@ public class Truck {
 			}
 		}
 	}
-	
+
 	public String createCSVMessage(int previousHop, int sourcePort,
 			String sourceAddress) {
 		String message = "" + sequenceNumber + "," + sourceAddress + ","
@@ -373,7 +368,13 @@ public class Truck {
 		return truckNumber;
 	}
 
-	public ArrayList<String> handleMessage() throws NumberFormatException,
+	// TODO: do some maintenance on this method.
+	// TODO: don't return an array list, just send the messages out
+	// TODO: make sure the bug from pre-post-due-dev is gone (random additions)
+	// TODO: truncate the message with a unique symbol to avoid needing bytes at
+	// the beginning for length
+	// TODO: keep the invalid message checks. those are still good
+	public ArrayList<String> handleMessages() throws NumberFormatException,
 			FatalTruckException {
 		ArrayList<String> outBoundMessages = new ArrayList<String>();
 		// check for messages on UDP from "The Air"
@@ -497,6 +498,8 @@ public class Truck {
 
 	public void startUDPListener(DatagramSocket airUDPSocket) {
 		// start listener
+		// TODO: save this thread instead of one-offing so that it can be closed
+		// gracefully
 		new UDPMessageListener(airUDPSocket).start();
 	}
 
@@ -547,7 +550,10 @@ public class Truck {
 	}
 
 	public void updateDesires() throws FatalTruckException {
-
+		handleMessages();
+		// TODO: call the truck AI class and then get the resulting calculated
+		// variables
+		theAI.doAI(this);
 	}
 
 	// collisions of trucks is a responsibility of the air to decide
@@ -570,7 +576,7 @@ public class Truck {
 	// note: update position before acceleration
 	private void updatePosition() {
 		// update truck position relative to speed and tick rate
-		this.pos = this.pos + (this.speed / tickRate);
+		this.pos = this.pos + (this.speed / TICK_RATE);
 	}
 
 	private class LaneChanger extends Thread {

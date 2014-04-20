@@ -21,6 +21,14 @@ public class TruckDriver {
 	private static boolean collision = false;
 	private static Truck theTruck;
 
+	// variables for reinitializing
+	private static int initAirPort;
+	private static int initTruckNumber;
+	private static int initLane;
+	private static double initPos;
+	private static double initSpeed;
+	private static double initAcceleration;
+
 	/**
 	 * @param args
 	 * @throws IOException
@@ -32,26 +40,31 @@ public class TruckDriver {
 	// args[3] - start pos
 	public static void main(String[] args) throws IOException {
 		String airIP = args[0];
-		int airPort = Integer.decode(args[1]);
+		int initAirPort = Integer.decode(args[1]);
 
-		int truckNumber = Integer.decode(args[2]);
-		int lane = Truck.RANDOMIZE_INT;
-		double pos = Double.parseDouble(args[3]);
+		int initTruckNumber = Integer.decode(args[2]);
+		int initLane = Truck.RANDOMIZE_INT;
+		double initPos = Double.parseDouble(args[3]);
 		// double pos = Truck.RANDOMIZE_DOUBLE;
-		double speed = Truck.RANDOMIZE_DOUBLE;
-		double acceleration = Truck.RANDOMIZE_DOUBLE;
-		// TODO:load from config
+		double initSpeed = Truck.RANDOMIZE_DOUBLE;
+		double initAcceleration = Truck.RANDOMIZE_DOUBLE;
+		// TODO:add feature: load from config
 		try {
 
 			// initialize truck
-			theTruck = new Truck(truckNumber, lane, pos, speed, acceleration);
-			theTruck.startUDPListener(new DatagramSocket(airPort));
+			theTruck = new Truck(initTruckNumber, initLane, initPos, initSpeed,
+					initAcceleration);
 
 			// open a waiting socket and wait to be started by the server
 			InetAddress addr = InetAddress.getByName(airIP);
-			System.out.println("[NORMAL] Truck " + truckNumber
+			System.out.println("[NORMAL] Truck " + initTruckNumber
 					+ ": Air IP address: " + addr);
-			Socket airTCPSock = new Socket(addr, airPort);
+			Socket airTCPSock = new Socket(addr, initAirPort);
+
+			// send truck number
+			PrintWriter out = new PrintWriter(new BufferedWriter(
+					new OutputStreamWriter(airTCPSock.getOutputStream())), true);
+			out.println("" + theTruck.getTruckNumber());
 
 			// start a listener for the restart signal
 			new ControllerListener(airTCPSock).start();
@@ -64,7 +77,6 @@ public class TruckDriver {
 
 		} catch (FatalTruckException e) {
 			System.out.println("[CRITICAL] " + e);
-			System.exit(99);
 		}
 	}
 
@@ -79,6 +91,10 @@ public class TruckDriver {
 			try {
 				BufferedReader in = new BufferedReader(new InputStreamReader(
 						airSocket.getInputStream()));
+				// TODO: receive the truck addresses
+				// TODO: set the truck addresses in the truck object
+
+				// begin loopable logic for controller to truckdriver talking
 				while (true) {
 					while (!running) {
 						String startMessage = in.readLine();
@@ -87,6 +103,10 @@ public class TruckDriver {
 							running = true;
 						}
 					}
+					theTruck = new Truck(initTruckNumber, initLane, initPos,
+							initSpeed, initAcceleration);
+					theTruck.startUDPListener(new DatagramSocket(initAirPort));
+					// TODO: set the truck addresses in the truck object
 
 					while (running) {
 						String crashMessage = in.readLine();
@@ -100,6 +120,8 @@ public class TruckDriver {
 			} catch (IOException e) {
 				System.out
 						.println("[SEVERE] IOException in thread that waits for reset signal.");
+			} catch (FatalTruckException e) {
+				System.out.println("[CRITICAL] " + e);
 			}
 		}
 
@@ -114,12 +136,16 @@ public class TruckDriver {
 
 		public void run() {
 			long tickStart = 0l;
+			final int STATUS_TICK_INTERVAL = 5;
+			int statusTickCount = 0;
+			// TODO: add some tools to save and output average or current tick
+			// computation time
+			// in order to better fine tune the tick rate as low as possible
 			while (true) {
 				try {
 					PrintWriter out = new PrintWriter(
 							new BufferedWriter(new OutputStreamWriter(
 									airSocket.getOutputStream())), true);
-					out.println("" + theTruck.getTruckNumber());
 					while (!running) {
 					}
 
@@ -134,6 +160,13 @@ public class TruckDriver {
 						while (((System.nanoTime() - tickStart) / 1000000000.0) < (1.0 / (double) tickRate)) {
 						}
 					}
+
+					if (statusTickCount < STATUS_TICK_INTERVAL) {
+						statusTickCount++;
+					} else {
+						statusTickCount = 0;
+						out.println("ok");
+					}
 				} catch (FatalTruckException e) {
 					PrintWriter out;
 					try {
@@ -142,7 +175,6 @@ public class TruckDriver {
 										airSocket.getOutputStream())), true);
 						out.println("collision");
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
 				} catch (IOException e1) {
