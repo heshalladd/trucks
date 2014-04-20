@@ -6,7 +6,10 @@ public class TruckAI {
 	private static final double MIN_ACCELERATION = Truck.MIN_ACCELERATION;
 	private static final double MAX_REASONABLE_SPEED = Truck.MAX_REASONABLE_SPEED;
 	private static final double MIN_REASONABLE_SPEED = Truck.MIN_REASONABLE_SPEED;
+	//max lane and min lane aren't used currently because of lack of lane functionality
+	@SuppressWarnings("unused")
 	private static final int MAX_LANE = Truck.MIN_LANE;
+	@SuppressWarnings("unused")
 	private static final int MIN_LANE = Truck.MAX_LANE;
 	private static final double TRUCK_LENGTH = Truck.TRUCK_LENGTH;
 	private static final int TICK_RATE = Controller.TICK_RATE;
@@ -19,6 +22,8 @@ public class TruckAI {
 	private static final double MULTI_CATCHING_SPEED = 31.5;
 	private static final double MIN_CONVOY_GAP = 15.0;
 	private static final double MAX_CONVOY_GAP = 25.0;
+	private static final double GAS_PEDAL_ACCEL_VALUE = (0.1 / (double) TICK_RATE);
+	private static final double BRAKE_PEDAL_DECEL_VALUE = (0.3 / (double) TICK_RATE);
 	// truck state magic number constants
 	// ai states:
 	// 0 - new truck object. has had no thoughts
@@ -41,22 +46,18 @@ public class TruckAI {
 
 	// ai variables
 	private int stabilizingCountdown = 0;
-	private double desiredSpeed;
-
 	private double startPos;
+	private double desiredSpeed = 0;
 	private int truckAIState = NEW_TRUCK;
 
 	// always call doAI after you have handled messages for this tick in order
 	// to avoid race conditions and inaccurate calculations for distances.
-	// TODO: a method for returning new desired speed (no need, just do setters)
-	// TODO: a method for returning new acceleration (no need, just do setters)
-	// TODO: a method for returning new convoy id (no need, just do setters)
-	// TODO: a method for returning new convoy position (no need, just do
-	// setters)
-	// TODO: continue coming up with TODO's for this class.
+	// TODO: continue tweaking ai to make it better. it is satisfactory at the
+	// moment
 
 	public TruckAI() {
-		// TODO: initialize ai stuff
+		// only has a constructor so that it can keep a state
+		// if it was just static, this would be cumbersome to work around
 	}
 
 	public int getAIState() {
@@ -135,8 +136,8 @@ public class TruckAI {
 					// and join the convoy ahead
 					truckAIState = MERGING_CONVOY;
 					desiredSpeed = MERGING_CATCHING_SPEED;
-					convoyID = truckCache[i].getConvoyID();
-					orderInConvoy = truckCache[i].getOrderInConvoy() + 1;
+					theTruck.setConvoyID(truckCache[i].getConvoyID());
+					theTruck.setOrderInConvoy(truckCache[i].getOrderInConvoy() + 1);
 					break;
 				}
 			}
@@ -144,7 +145,7 @@ public class TruckAI {
 			// based on positional guess, accelerate or decelerate to find more
 			// trucks
 			// if not first, accelerate
-			if (!probablyFirst) {
+			if (!theTruck.getProbablyFirst()) {
 				desiredSpeed = SOLO_CATCHING_SPEED;
 			}
 			break;
@@ -152,15 +153,17 @@ public class TruckAI {
 		case MULTI_CONVOY:
 			// if there is a truck in this convoy with position 5, become full
 			// convoy
-			if (getConvoySize() == 5) {
+			if (theTruck.getConvoySize() == 5) {
 				truckAIState = FULL_CONVOY;
 			}
 			// if the leader of the convoy isn't the first truck,
 			// accelerate while maintaining distance
 			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i] && truckNumber - 1 == i
+				if (truckInitialized[i]
+						&& theTruck.getTruckNumber() - 1 == i
 						&& !truckCache[i].getProbablyFirst()
-						&& truckCache[i].getConvoyID().equals(convoyID)
+						&& truckCache[i].getConvoyID().equals(
+								theTruck.getConvoyID())
 						&& truckCache[i].getOrderInConvoy() == 1
 						&& desiredSpeed == STABILIZING_SPEED) {
 					desiredSpeed = MULTI_CATCHING_SPEED;
@@ -173,12 +176,13 @@ public class TruckAI {
 			for (int i = 0; i < truckCache.length; i++) {
 				// NOTE: this biases forward merging
 				if (truckInitialized[i]
-						&& truckNumber - 1 != i
-						&& truckCache[i].getPos() > pos
-						&& !truckCache[i].getConvoyID().equals(convoyID)
-						&& truckCache[i].getPos() - pos > MAX_CONVOY_GAP
+						&& theTruck.getTruckNumber() - 1 != i
+						&& truckCache[i].getPos() > theTruck.getPos()
+						&& !truckCache[i].getConvoyID().equals(
+								theTruck.getConvoyID())
+						&& truckCache[i].getPos() - theTruck.getPos() > MAX_CONVOY_GAP
 								+ TRUCK_LENGTH
-						&& truckCache[i].getLane() == lane) {
+						&& truckCache[i].getLane() == theTruck.getLane()) {
 					truckAIState = SOLO_CONVOY;
 					break;
 				}
@@ -192,7 +196,7 @@ public class TruckAI {
 		case MERGING_CONVOY:
 			// if there is a truck in this convoy with position 5, become full
 			// convoy
-			if (getConvoySize() == 5) {
+			if (theTruck.getConvoySize() == 5) {
 				truckAIState = FULL_CONVOY;
 			}
 
@@ -202,18 +206,19 @@ public class TruckAI {
 			Truck nextTruck = null;
 			double nextTruckPos = 999999.0;
 			for (int i = 0; i < truckCacheFreeze.length; i++) {
-				if (truckInitialized[i] && truckNumber - 1 != i
+				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
 						&& truckCacheFreeze[i].getPos() < nextTruckPos
-						&& truckCacheFreeze[i].getPos() > pos) {
+						&& truckCacheFreeze[i].getPos() > theTruck.getPos()) {
 					nextTruck = truckCacheFreeze[i];
 					nextTruckPos = truckCacheFreeze[i].getPos();
 					break;
 				}
 			}
 			if (nextTruck != null) {
-				convoyID = nextTruck.getConvoyID();
-				orderInConvoy = nextTruck.getOrderInConvoy() + 1;
-				if (nextTruck.getPos() - pos < MAX_CONVOY_GAP + TRUCK_LENGTH) {
+				theTruck.setConvoyID(nextTruck.getConvoyID());
+				theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy() + 1);
+				if (nextTruck.getPos() - theTruck.getPos() < MAX_CONVOY_GAP
+						+ TRUCK_LENGTH) {
 					// once within acceptable range, become a MULTI_CONVOY
 					truckAIState = MULTI_CONVOY;
 					desiredSpeed = STABILIZING_SPEED;
@@ -230,54 +235,58 @@ public class TruckAI {
 		Truck nextTruck = null;
 		double nextTruckPos = 999999.0;
 		for (int i = 0; i < truckCacheFreeze.length; i++) {
-			if (truckInitialized[i] && truckNumber - 1 != i
+			if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
 					&& truckCacheFreeze[i].getPos() < nextTruckPos
-					&& truckCacheFreeze[i].getPos() > pos) {
+					&& truckCacheFreeze[i].getPos() > theTruck.getPos()) {
 				nextTruck = truckCacheFreeze[i];
 				nextTruckPos = truckCacheFreeze[i].getPos();
 				break;
 			}
 		}
 		if (nextTruck != null
-				&& nextTruck.getPos() - pos < MIN_CONVOY_GAP + TRUCK_LENGTH
-				&& desiredSpeed > MIN_REASONABLE_SPEED) {
+				&& nextTruck.getPos() - theTruck.getPos() < MIN_CONVOY_GAP
+						+ TRUCK_LENGTH && desiredSpeed > MIN_REASONABLE_SPEED) {
 			desiredSpeed = desiredSpeed - 0.15;
 		}
 		if (nextTruck != null
-				&& nextTruck.getPos() - pos > MAX_CONVOY_GAP + TRUCK_LENGTH
-				&& desiredSpeed < CATCHING_SPEED) {
+				&& nextTruck.getPos() - theTruck.getPos() > MAX_CONVOY_GAP
+						+ TRUCK_LENGTH && desiredSpeed < CATCHING_SPEED) {
 			desiredSpeed = desiredSpeed + 0.05;
 		}
 		if (nextTruck != null
-				&& nextTruck.getPos() - pos > MIN_CONVOY_GAP + TRUCK_LENGTH
-				&& nextTruck.getPos() - pos < MAX_CONVOY_GAP + TRUCK_LENGTH) {
+				&& nextTruck.getPos() - theTruck.getPos() > MIN_CONVOY_GAP
+						+ TRUCK_LENGTH
+				&& nextTruck.getPos() - theTruck.getPos() < MAX_CONVOY_GAP
+						+ TRUCK_LENGTH) {
 			desiredSpeed = STABILIZING_SPEED;
 		}
-		if (nextTruck != null && nextTruck.getPos() - pos < 40) {
-			convoyID = nextTruck.getConvoyID();
-			orderInConvoy = nextTruck.getOrderInConvoy() + 1;
+		if (nextTruck != null && nextTruck.getPos() - theTruck.getPos() < 40) {
+			theTruck.setConvoyID(nextTruck.getConvoyID());
+			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy() + 1);
 		}
 		// logic to try to make truck its desired speed by modifying
 		// acceleration
-		if (this.speed < this.desiredSpeed) {
-			if (this.acceleration < MAX_ACCELERATION - 0.1) {
-				if (this.acceleration < 0) {
-					this.acceleration = 0;
+		if (theTruck.getSpeed() < desiredSpeed) {
+			if (theTruck.getAcceleration() < MAX_ACCELERATION - 0.1) {
+				if (theTruck.getAcceleration() < 0) {
+					theTruck.setAcceleration(0);
 				} else {
-					this.acceleration += 0.01;
+					theTruck.setAcceleration(theTruck.getAcceleration()
+							+ GAS_PEDAL_ACCEL_VALUE);
 				}
 			}
 		} else {
-			if (this.acceleration > MIN_ACCELERATION + 0.4) {
-				if (this.acceleration > 0) {
-					this.acceleration = 0;
+			if (theTruck.getAcceleration() > MIN_ACCELERATION + 0.4) {
+				if (theTruck.getAcceleration() > 0) {
+					theTruck.setAcceleration(0);
 				} else {
-					this.acceleration -= 0.03;
+					theTruck.setAcceleration(theTruck.getAcceleration()
+							- BRAKE_PEDAL_DECEL_VALUE);
 				}
 			}
 		}
-		if (this.speed == this.desiredSpeed) {
-			acceleration = 0;
+		if (theTruck.getSpeed() == desiredSpeed) {
+			theTruck.setAcceleration(0);
 		}
 
 	}

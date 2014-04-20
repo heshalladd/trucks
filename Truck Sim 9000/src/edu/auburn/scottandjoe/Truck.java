@@ -551,8 +551,8 @@ public class Truck {
 
 	public void updateDesires() throws FatalTruckException {
 		handleMessages();
-		// TODO: call the truck AI class and then get the resulting calculated
-		// variables
+		// call the truck AI class
+		// NOTE: only call this once the caches are stable for best results
 		theAI.doAI(this);
 	}
 
