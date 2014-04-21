@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -11,13 +13,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class Truck {
-	// TODO: add method to stop all threads.
 	// TODO: General: track last status update time for each truck. Disregard
 	// stale statuses for collision checks to prevent crashes with "phantoms"
-	// TODO: Alternate: always send air all new tcp messages so that the air can
-	// do the collision detection. Allow air to predict positions to make up for
-	// "phantom" collisions caused small discrepancies between two trucks update
-	// signals
 
 	// physical constraints constants
 	public static final double MAX_ACCELERATION = 1.0;
@@ -33,10 +30,12 @@ public class Truck {
 
 	// initialization parameter constants
 	public static final int RANDOMIZE_INT = -10000;
-
 	public static final double RANDOMIZE_DOUBLE = -10000.0;
-	// tick rate taken from the air
+
+	// imported constants
 	private static final int TICK_RATE = Controller.TICK_RATE;
+	private static final int PORT = Controller.PORT;
+
 	// truck meta and ai related variables
 	private int desiredLane;
 	private int desiredPlaceInConvoy;
@@ -50,22 +49,23 @@ public class Truck {
 
 	private boolean probablyFirst = false;
 	private TruckAI theAI = new TruckAI();
+
 	// message meta
 	private int sequenceNumber = 1;
 	private int messagesPerSecond = 50;
-
 	private long lastMessageTime = 0l;
-	private static DatagramSocket airUDPSocket;
+	private DatagramSocket airUDPSocket;
+
 	// truck properties
 	private double acceleration;
 	private double pos;
 	private double speed = 0;
-
 	private int truckNumber;
-
 	private int lane;
+
 	// intents
 	private boolean intentChangeLane = false;
+
 	// caching
 	private Truck[] truckCache = new Truck[5];
 	private int[] truckSequenceCache = new int[5];
@@ -204,54 +204,30 @@ public class Truck {
 		}
 	}
 
-	public void checkIfInRange() {
-		// TODO: adapt this method
-		// determine whether those messages are going to make it
-		// through
-		if (trucksInRange.size() > 0) {
-			for (int i = 0; i < trucksInRange.size(); i++) {
-				double chanceToSend = 0.0;
-				double distanceApart = Math
-						.abs(theTrucks[messageTruckNumber - 1].getPos()
-								- trucksInRange.get(i).getPos());
-				// piecewise equation for determining
-				// transmission
-				// probability
-				if (distanceApart < 70) {
-					chanceToSend = -0.002142857 * distanceApart + 1;
-				} else if (distanceApart >= 70 && distanceApart < 100) {
-					chanceToSend = -(0.00094 * Math.pow(distanceApart - 70, 2)) + 0.85;
-				} else if (distanceApart >= 100) {
-					chanceToSend = 0.0;
-				}
-
-				// roll the dice
-				Random rand = new Random();
-				if (chanceToSend >= rand.nextDouble()) {
-					byte[] outBoundPacketBuf = new byte[4028];
-					outBoundPacketBuf = receivedMessageWhole.getBytes();
-
-					// get address and port for sending stuff
-					// via
-					// UDP.
-					DatagramSocket forwardUDPSock = new DatagramSocket();
-					InetAddress truckDestination = InetAddress
-							.getByName(truckAddresses[trucksInRange.get(i)
-									.getTruckNumber() - 1]);
-					DatagramPacket outBoundUDPPacket = new DatagramPacket(
-							outBoundPacketBuf, outBoundPacketBuf.length,
-							truckDestination, port);
-
-					// forward transmissions (that qualify) to
-					// their
-					// hosts as UDP.
-					forwardUDPSock.send(outBoundUDPPacket);
-
-					// close socket
-					forwardUDPSock.close();
-				}
-			}
+	// determines whether message will make it through using a mathematical
+	// model
+	public boolean isMessageSuccessful(Truck destinationTruck) {
+		double chanceToSend = 0.0;
+		double distanceApart = Math.abs(pos - destinationTruck.getPos());
+		// piecewise equation for determining
+		// transmission
+		// probability
+		if (distanceApart < 70) {
+			chanceToSend = -0.002142857 * distanceApart + 1;
+		} else if (distanceApart >= 70 && distanceApart < 100) {
+			chanceToSend = -(0.00094 * Math.pow(distanceApart - 70, 2)) + 0.85;
+		} else if (distanceApart >= 100) {
+			chanceToSend = 0.0;
 		}
+
+		// roll the dice
+		Random rand = new Random();
+		if (chanceToSend >= rand.nextDouble()) {
+			return true;
+		} else {
+			return false;
+		}
+
 	}
 
 	public String createCSVMessage(int previousHop, int sourcePort,
@@ -260,7 +236,7 @@ public class Truck {
 				+ sourcePort + "," + previousHop + "," + acceleration + ","
 				+ pos + "," + speed + "," + truckNumber + "," + lane + ","
 				+ desiredLane + "," + desiredPlaceInConvoy + "," + convoyID
-				+ "," + orderInConvoy + "," + probablyFirst;
+				+ "," + orderInConvoy + "," + probablyFirst + "]";
 		sequenceNumber++;
 		return message;
 
@@ -368,16 +344,11 @@ public class Truck {
 		return truckNumber;
 	}
 
-	// TODO: do some maintenance on this method.
-	// TODO: don't return an array list, just send the messages out
 	// TODO: make sure the bug from pre-post-due-dev is gone (random additions)
-	// TODO: truncate the message with a unique symbol to avoid needing bytes at
-	// the beginning for length
 	// TODO: keep the invalid message checks. those are still good
-	public ArrayList<String> handleMessages() throws NumberFormatException,
+	public void handleMessages() throws NumberFormatException,
 			FatalTruckException {
-		ArrayList<String> outBoundMessages = new ArrayList<String>();
-		// check for messages on UDP from "The Air"
+		// check for messages on UDP handlers buffer
 
 		if (!incomingUDPMessages.isEmpty()) {
 			String[] messageToProcess;
@@ -387,6 +358,9 @@ public class Truck {
 			while (!incomingUDPMessages.isEmpty()) {
 				messageToProcessWhole = incomingUDPMessages.remove();
 				messageToProcess = messageToProcessWhole.split(",");
+				// truncate last message segment
+				// NOTE: Change this index if segments are added or removed.
+				messageToProcess[13] = messageToProcess[13].split("]")[0];
 
 				// determine if message is new
 				int messageTruckNumber = Integer.decode(messageToProcess[7]);
@@ -401,12 +375,13 @@ public class Truck {
 					}
 
 					// update previous hop
+					int previousHop = Integer.decode(messageToProcess[3]);
 					messageToProcess[3] = "" + truckNumber;
 					if (Integer.decode(messageToProcess[3]) != messageTruckNumber) {
 						messagesForwarded = messageToProcess.length;
 						lastMessageToForward = messageToProcessWhole;
 					}
-					// return a string message to send to the air
+					// form the new message as a string
 					for (int i = 0; i < messageToProcess.length; i++) {
 						tempMessage += messageToProcess[i];
 						if (i != 0 && i != messageToProcess.length - 1) {
@@ -414,8 +389,28 @@ public class Truck {
 						}
 					}
 
-					outBoundMessages.add(tempMessage);
+					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
 
+					// determine what trucks are valid and in range
+					for (int i = 0; i < truckCache.length; i++) {
+						if (i != previousHop - 1 && i != truckNumber - 1
+								&& i != messageTruckNumber
+								&& truckInitialized[i]) {
+							trucksInRange.add(truckCache[i]);
+						}
+					}
+
+					// determine whether those messages are going to make it
+					// through
+					if (trucksInRange.size() > 0) {
+						for (int i = 0; i < trucksInRange.size(); i++) {
+							// roll the dice
+							Truck targetTruck = trucksInRange.get(i);
+							if (isMessageSuccessful(targetTruck)) {
+								sendMessage(targetTruck, tempMessage);
+							}
+						}
+					}
 				} else {
 					messagesDropped++;
 				}
@@ -425,18 +420,65 @@ public class Truck {
 		// check if it is time to send a message about this truck
 		if (((System.nanoTime() - lastMessageTime) / 1000000000.0) > (1.0 / (double) messagesPerSecond)) {
 			// create a message
-			outBoundMessages.add(createCSVMessage(truckNumber,
-					airUDPSocket.getPort(), new String("0")));
+			String newMessage = createCSVMessage(truckNumber,
+					airUDPSocket.getPort(), new String("0"));
 			// update last message time
 			lastMessageTime = System.nanoTime();
-		}
 
-		return outBoundMessages;
+			// find trucks in range
+			ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
+
+			// determine what trucks are in range
+			for (int i = 0; i < truckCache.length; i++) {
+				if (i != truckNumber - 1 && truckInitialized[i]) {
+					trucksInRange.add(truckCache[i]);
+				}
+			}
+			if (trucksInRange.size() > 0) {
+				for (int i = 0; i < trucksInRange.size(); i++) {
+					// roll the dice
+					Truck targetTruck = trucksInRange.get(i);
+					if (isMessageSuccessful(targetTruck)) {
+						sendMessage(targetTruck, newMessage);
+					}
+				}
+			}
+		}
 	}
 
 	private boolean isMessageNew(int messageTruckNumber,
 			int messageSequenceNumber) {
 		return (truckSequenceCache[messageTruckNumber - 1] < messageSequenceNumber && messageTruckNumber != truckNumber);
+	}
+
+	private void sendMessage(Truck targetTruck, String message) {
+		// get address and port for sending stuff via
+		// UDP.
+		byte[] outBoundPacketBuf = new byte[4028];
+		outBoundPacketBuf = message.getBytes();
+		DatagramSocket forwardUDPSock;
+		try {
+			forwardUDPSock = new DatagramSocket();
+			InetAddress truckDestination = InetAddress
+					.getByName(truckAddresses[targetTruck.getTruckNumber() - 1]);
+			DatagramPacket outBoundUDPPacket = new DatagramPacket(
+					outBoundPacketBuf, outBoundPacketBuf.length,
+					truckDestination, PORT);
+
+			// forward transmissions (that qualify) to
+			// their
+			// hosts as UDP.
+			forwardUDPSock.send(outBoundUDPPacket);
+
+			// close socket
+			forwardUDPSock.close();
+		} catch (SocketException e) {
+			e.printStackTrace();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void setAcceleration(double acceleration) {
@@ -492,15 +534,24 @@ public class Truck {
 		this.speed = speed;
 	}
 
+	public void setTruckAddresses(String[] addresses) {
+		this.truckAddresses = addresses;
+	}
+
 	public void setTruckNumber(int truckNumber) {
 		this.truckNumber = truckNumber;
 	}
 
 	public void startUDPListener(DatagramSocket airUDPSocket) {
 		// start listener
-		// TODO: save this thread instead of one-offing so that it can be closed
-		// gracefully
-		new UDPMessageListener(airUDPSocket).start();
+		this.airUDPSocket = airUDPSocket;
+		new UDPMessageListener().start();
+	}
+
+	public void stopUDPListener() {
+		// close socket to force the listener to stop blocking and quit to catch
+		// statement and end the thread
+		airUDPSocket.close();
 	}
 
 	private void updateCache(String[] message) throws NumberFormatException,
@@ -599,10 +650,9 @@ public class Truck {
 		}
 	}
 
-	private static class UDPMessageListener extends Thread {
+	private class UDPMessageListener extends Thread {
 
-		public UDPMessageListener(DatagramSocket UDPSocket) {
-			airUDPSocket = UDPSocket;
+		public UDPMessageListener() {
 		}
 
 		public void run() {
@@ -618,8 +668,6 @@ public class Truck {
 							.add(new String(receivedPacket.getData())
 									.split("\n")[0]);
 				}
-
-				// TODO:close the socket
 			} catch (IOException e) {
 				System.out
 						.println("[SEVERE] IOException in thread that handles message handoff.");

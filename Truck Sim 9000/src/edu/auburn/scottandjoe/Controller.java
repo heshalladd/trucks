@@ -12,6 +12,7 @@ import java.util.Scanner;
 
 public class Controller {
 	public static final int TICK_RATE = 30;
+	public static final int PORT = 10125;
 
 	private static int totalTrucks = 0;
 	private static boolean allTrucksConnected = false;
@@ -23,8 +24,10 @@ public class Controller {
 	public static void main(String[] args) {
 		System.out.println("[NORMAL] Launching the controller.");
 
-		int port;
-		port = parsePortFromArgs(args);
+		// NOTE: port is constant, because there is not
+		// much need for variable port.
+		// int port;
+		// port = parsePortFromArgs(args);
 
 		System.out.println("[NORMAL] Status: Running.");
 
@@ -33,7 +36,7 @@ public class Controller {
 		new UserInputHandler().start();
 
 		try {
-			server = new ServerSocket(port);
+			server = new ServerSocket(PORT);
 		} catch (IOException e) {
 			System.out.println("[SEVERE] Failed to open server socket.");
 			System.exit(0);
@@ -68,6 +71,7 @@ public class Controller {
 
 	}
 
+	@SuppressWarnings("unused")
 	private static int parsePortFromArgs(String[] arguments) {
 		int port = 0;
 		if (arguments.length == 0) {
@@ -106,8 +110,19 @@ public class Controller {
 				truckAddresses[truckNumber - 1] = socket
 						.getRemoteSocketAddress().toString().split("/")[1]
 						.split(":")[0];
-				// TODO: wait for all trucks to connect, then send all of the
+				
+				// wait for all trucks to connect, then send all of the
 				// addresses out.
+				//TODO: maybe eliminate busy wait and replace with thread.sleep
+				while(!allTrucksConnected) {
+				}
+				PrintWriter out = new PrintWriter(new BufferedWriter(
+						new OutputStreamWriter(socket.getOutputStream())),
+						true);
+				for(int i = 0; i < truckAddresses.length; i++) {
+					out.println(truckAddresses[i]);
+				}
+				
 
 				// enter the loopable portion of handling trucks
 				while (true) {
@@ -117,9 +132,6 @@ public class Controller {
 					System.out
 							.println("[NORMAL] Starting simulation for truck "
 									+ truckNumber);
-					PrintWriter out = new PrintWriter(new BufferedWriter(
-							new OutputStreamWriter(socket.getOutputStream())),
-							true);
 					out.println("start");
 
 					// listen to this threads truck connection for a collision

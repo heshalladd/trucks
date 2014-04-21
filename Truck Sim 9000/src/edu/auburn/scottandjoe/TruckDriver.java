@@ -91,9 +91,13 @@ public class TruckDriver {
 			try {
 				BufferedReader in = new BufferedReader(new InputStreamReader(
 						airSocket.getInputStream()));
-				// TODO: receive the truck addresses
-				// TODO: set the truck addresses in the truck object
-
+				// receive the truck addresses
+				String[] receivedAddresses = new String[5];
+				for(int i = 0; i < receivedAddresses.length; i++) {
+					receivedAddresses[i] = in.readLine();
+				}
+				// set the truck addresses in the truck object
+				theTruck.setTruckAddresses(receivedAddresses);
 				// begin loopable logic for controller to truckdriver talking
 				while (true) {
 					while (!running) {
@@ -106,8 +110,8 @@ public class TruckDriver {
 					theTruck = new Truck(initTruckNumber, initLane, initPos,
 							initSpeed, initAcceleration);
 					theTruck.startUDPListener(new DatagramSocket(initAirPort));
-					// TODO: set the truck addresses in the truck object
-
+					// set the truck addresses in the truck object
+					theTruck.setTruckAddresses(receivedAddresses);
 					while (running) {
 						String crashMessage = in.readLine();
 						if (crashMessage.equals("collision")) {

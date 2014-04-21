@@ -190,7 +190,7 @@ public class TruckAI {
 			break;
 
 		case FULL_CONVOY:
-			// TODO: if in a full convoy, broadcast end to end timing packets
+			// TODO: if in a full convoy, broadcast end to end timing packets and do some calculations
 			break;
 
 		case MERGING_CONVOY:
