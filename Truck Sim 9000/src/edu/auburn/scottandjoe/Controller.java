@@ -11,7 +11,7 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Controller {
-	public static final int TICK_RATE = 30;
+	public static final int TICK_RATE = 10;
 	public static final int PORT = 10125;
 
 	private static int totalTrucks = 0;

@@ -154,8 +154,6 @@ public class TruckDriver {
 			// in order to better fine tune the tick rate as low as possible
 			while (true) {
 				try {
-					System.out
-							.println("[NORMAL] TruckLogicLooper waiting for ControllerListener to set running to true.");
 					while (!running) {
 						try {
 							Thread.sleep(100);

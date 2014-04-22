@@ -364,13 +364,13 @@ public class Truck {
 	// TODO: keep the invalid message checks. those are still good
 	public void handleMessages() throws NumberFormatException,
 			FatalTruckException {
-		// sif this is the first time, let everyone know your starting position
+		// if this is the first time, let everyone know your starting position
 		if (lastMessageTime == 0l) {
 			// create a message
 			String newMessage = createCSVMessage(truckNumber,
 					airUDPSocket.getPort(), new String("0"));
 			// update last message time
-			lastMessageTime = System.nanoTime();
+			//lastMessageTime = System.nanoTime();
 			sendGenesisBroadcast(newMessage);
 			lastMessage = newMessage;
 		}
