@@ -276,7 +276,11 @@ public class TruckDriver {
 					System.out.println("Msgs Forwarded:"
 							+ theTruck.getMessagesForwarded()
 							+ "  Messages Dropped:"
-							+ theTruck.getMessagesDropped());
+							+ theTruck.getMessagesDropped()
+							+ "  Messages Created:"
+							+ theTruck.getMessagesCreated()
+							+ "  Messages Sent:"
+							+ theTruck.getMessagesSent());
 					System.out.println("Last Message sent: " + theTruck.getLastMessage());
 					System.out.println("===========================");
 
