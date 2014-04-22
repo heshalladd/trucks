@@ -107,25 +107,38 @@ public class Controller {
 				String receivedMessage = "";
 				receivedMessage = in.readLine();
 				int truckNumber = Integer.decode(receivedMessage);
+				System.out
+						.println("[NORMAL] Truck connected with number "
+								+ truckNumber
+								+ " and address "
+								+ socket.getRemoteSocketAddress().toString()
+										.split("/")[1].split(":")[0]);
 				truckAddresses[truckNumber - 1] = socket
 						.getRemoteSocketAddress().toString().split("/")[1]
 						.split(":")[0];
-				
+
 				// wait for all trucks to connect, then send all of the
 				// addresses out.
-				//TODO: maybe eliminate busy wait and replace with thread.sleep
-				while(!allTrucksConnected) {
+				while (!allTrucksConnected) {
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
 				PrintWriter out = new PrintWriter(new BufferedWriter(
-						new OutputStreamWriter(socket.getOutputStream())),
-						true);
-				for(int i = 0; i < truckAddresses.length; i++) {
+						new OutputStreamWriter(socket.getOutputStream())), true);
+				System.out.println("[NORMAL] Sending addresses out to truck "
+						+ truckNumber);
+				for (int i = 0; i < truckAddresses.length; i++) {
 					out.println(truckAddresses[i]);
 				}
-				
+				System.out.println("[NORMAL] Addresses sent to truck "
+						+ truckNumber);
 
 				// enter the loopable portion of handling trucks
 				while (true) {
+
 					while (!runSimulation) {
 						Thread.sleep(10);
 					}
@@ -133,11 +146,15 @@ public class Controller {
 							.println("[NORMAL] Starting simulation for truck "
 									+ truckNumber);
 					out.println("start");
-
+					System.out.println("[NORMAL] Truck " + truckNumber
+							+ " started.");
 					// listen to this threads truck connection for a collision
 					// also respond with the status of the simulation
 					while (runSimulation) {
 						receivedMessage = in.readLine();
+						System.out
+								.println("[NORMAL] Received status from truck "
+										+ truckNumber + ": " + receivedMessage);
 						String statusMessage = "ok";
 						if (receivedMessage.equals("collision")) {
 							collision = true;
@@ -149,11 +166,13 @@ public class Controller {
 						if (collision && !collisionForTruck[truckNumber - 1]) {
 							statusMessage = "collision";
 						}
-
+						System.out
+								.println("[NORMAL] Sending status of environment to truck "
+										+ truckNumber + ": " + statusMessage);
 						out.println(statusMessage);
 					}
-					System.out
-							.println("[SEVERE] Something bad happened to one of the trucks.");
+					System.out.println("[SEVERE] TruckHandler" + truckNumber
+							+ ": Something bad happened to one of the trucks.");
 				}
 			}
 
@@ -171,7 +190,6 @@ public class Controller {
 				}
 			}
 		}
-
 	}
 
 	private static class UserInputHandler extends Thread {
@@ -225,7 +243,7 @@ public class Controller {
 		private void waitForTrucksToConnect() {
 			while (!allTrucksConnected) {
 				try {
-					Thread.sleep(100);
+					Thread.sleep(2000);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}

@@ -6,7 +6,8 @@ public class TruckAI {
 	private static final double MIN_ACCELERATION = Truck.MIN_ACCELERATION;
 	private static final double MAX_REASONABLE_SPEED = Truck.MAX_REASONABLE_SPEED;
 	private static final double MIN_REASONABLE_SPEED = Truck.MIN_REASONABLE_SPEED;
-	//max lane and min lane aren't used currently because of lack of lane functionality
+	// max lane and min lane aren't used currently because of lack of lane
+	// functionality
 	@SuppressWarnings("unused")
 	private static final int MAX_LANE = Truck.MIN_LANE;
 	@SuppressWarnings("unused")
@@ -190,7 +191,8 @@ public class TruckAI {
 			break;
 
 		case FULL_CONVOY:
-			// TODO: if in a full convoy, broadcast end to end timing packets and do some calculations
+			// TODO: if in a full convoy, broadcast end to end timing packets
+			// and do some calculations
 			break;
 
 		case MERGING_CONVOY:

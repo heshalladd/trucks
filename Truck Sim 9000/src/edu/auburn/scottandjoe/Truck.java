@@ -54,6 +54,7 @@ public class Truck {
 	private int sequenceNumber = 1;
 	private int messagesPerSecond = 50;
 	private long lastMessageTime = 0l;
+	private String lastMessage = "";
 	private DatagramSocket airUDPSocket;
 
 	// truck properties
@@ -276,6 +277,10 @@ public class Truck {
 		return lane;
 	}
 
+	public String getLastMessage() {
+		return lastMessage;
+	}
+
 	public String getLastMessageToForward() {
 		return lastMessageToForward;
 	}
@@ -348,8 +353,12 @@ public class Truck {
 	// TODO: keep the invalid message checks. those are still good
 	public void handleMessages() throws NumberFormatException,
 			FatalTruckException {
-		// check for messages on UDP handlers buffer
-
+		// setLastMessage if it hasn't been
+		if(lastMessageTime == 0l) {
+			lastMessageTime = System.nanoTime();
+		}
+		
+		//check for messages on UDP handler's buffer
 		if (!incomingUDPMessages.isEmpty()) {
 			String[] messageToProcess;
 			String messageToProcessWhole;
@@ -440,6 +449,7 @@ public class Truck {
 					Truck targetTruck = trucksInRange.get(i);
 					if (isMessageSuccessful(targetTruck)) {
 						sendMessage(targetTruck, newMessage);
+						lastMessage = newMessage;
 					}
 				}
 			}
