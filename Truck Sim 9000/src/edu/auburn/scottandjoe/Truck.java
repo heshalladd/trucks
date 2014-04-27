@@ -38,6 +38,7 @@ public class Truck {
 	private static final int PORT = Controller.PORT;
 
 	// truck meta and ai related variables
+	private int desiredTruckSimPop;
 	private int desiredLane;
 	private int desiredPlaceInConvoy;
 	private int orderInConvoy = 1; // 1 will signify leader of convoy
@@ -49,15 +50,13 @@ public class Truck {
 
 	// message meta
 	private int sequenceNumber = 1;
-	private int messagesPerSecond = 50;
 	private int messagesForwarded = 0;
 	private int messagesDropped = 0;
 	private int messagesCreated = 0;
 	private int messagesSent = 0;
 	private int malformedMessagesReceived = 0;
-	private long lastMessageTime = 0l;
-	private String lastMessage = "";
-	private String lastMessageToForward = "";
+	private String lastCreatedMessage = "";
+	private String lastForwardedMessage = "";
 	private DatagramSocket airUDPSocket;
 	private FloodingAlgorithm theFA = null;
 
@@ -73,9 +72,9 @@ public class Truck {
 	private boolean intentChangeLane = false;
 
 	// caching
-	private Truck[] truckCache = new Truck[5];
-	private int[] truckSequenceCache = new int[5];
-	private String[] truckAddresses = new String[5];
+	private Truck[] truckCache;
+	private int[] truckSequenceCache;
+	private String[] truckAddresses;
 
 	public static boolean[] truckInitialized = new boolean[5]; // will
 																// initialize to
@@ -85,9 +84,13 @@ public class Truck {
 	// initializes a truck object. truck numbering conflicts are not handled,
 	// and are the truck runners responsibility
 	public Truck(int truckNumber, int lane, double pos, double speed,
-			double acceleration, FloodingAlgorithm FA)
+			double acceleration, FloodingAlgorithm FA, int desiredTruckSimPop)
 			throws FatalTruckException {
 		this.theFA = FA;
+		this.desiredTruckSimPop = desiredTruckSimPop;
+		truckCache = new Truck[desiredTruckSimPop];
+		truckSequenceCache = new int[desiredTruckSimPop];
+		truckAddresses = new String[desiredTruckSimPop];
 		Random rand = new Random();
 		this.truckNumber = truckNumber;
 		if (lane != RANDOMIZE_INT) {
@@ -268,17 +271,25 @@ public class Truck {
 	public int getDesiredPlaceInConvoy() {
 		return desiredPlaceInConvoy;
 	}
+	
+	public int getDesiredTruckSimPop() {
+		return desiredTruckSimPop;
+	}
 
 	public int getLane() {
 		return lane;
 	}
 
-	public String getLastMessage() {
-		return lastMessage;
+	public String getLastForwardedMessage() {
+		return lastForwardedMessage;
 	}
 
-	public String getLastMessageToForward() {
-		return lastMessageToForward;
+	public String getLastCreatedMessage() {
+		return lastCreatedMessage;
+	}
+	
+	public int getMalformedMessagesReceived() {
+		return malformedMessagesReceived;
 	}
 
 	public int getMessagesCreated() {
@@ -345,6 +356,10 @@ public class Truck {
 		return this.theAI.getAIState();
 	}
 
+	public int[] getTruckSequenceCache() {
+		return this.truckSequenceCache;
+	}
+	
 	public Truck[] getTruckCache() {
 		return truckCache;
 	}
@@ -369,12 +384,27 @@ public class Truck {
 
 	}
 
-	private boolean isMessageNew(int messageTruckNumber,
-			int messageSequenceNumber) {
-		return (truckSequenceCache[messageTruckNumber - 1] < messageSequenceNumber && messageTruckNumber != truckNumber);
+	public void increaseMalformedMessagesReceived() {
+		malformedMessagesReceived++;
+	}
+	
+	public void increaseMessagesCreated() {
+		messagesCreated++;
+	}
+	
+	public void increaseMessagesDropped() {
+		messagesDropped++;
+	}
+	
+	public void increaseMessagesSent() {
+		messagesSent++;
+	}
+	
+	public void increaseMessagesForwarded() {
+		messagesForwarded++;
 	}
 
-	private void sendMessage(Truck targetTruck, String message) {
+	public void sendMessage(Truck targetTruck, String message) {
 		// get address and port for sending stuff via
 		// UDP.
 		byte[] outBoundPacketBuf = new byte[4028];
@@ -428,9 +458,12 @@ public class Truck {
 		intentChangeLane = true;
 	}
 
-	// set messages per second
-	public void setMPS(int mps) {
-		this.messagesPerSecond = mps;
+	public void setLastCreatedMessage(String message) {
+		this.lastCreatedMessage = message;
+	}
+	
+	public void setLastForwardedMessage(String message) {
+		lastForwardedMessage = message;
 	}
 
 	public void setOrderInConvoy(int orderInConvoy) {
@@ -477,9 +510,9 @@ public class Truck {
 		airUDPSocket.close();
 	}
 
-	private void updateCache(HashMap<String, String> parsedMessageContents) throws NumberFormatException,
+	private void updateCache(HashMap<String, String> parsedMessageContents,
+			int messageTruckNumber) throws NumberFormatException,
 			FatalTruckException {
-		int messageTruckNumber = Integer.decode(message[7]);
 		if (truckInitialized[messageTruckNumber - 1]) {
 			truckCache[messageTruckNumber - 1].setSequenceNumber(Integer
 					.decode(message[0]));

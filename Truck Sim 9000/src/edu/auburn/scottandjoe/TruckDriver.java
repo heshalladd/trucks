@@ -168,7 +168,7 @@ public class TruckDriver {
 							break;
 						}
 						tickStart = System.nanoTime();
-						theTruck.updateDesires();
+						theTruck.updateMental();
 						theTruck.updatePhysical();
 						while (((System.nanoTime() - tickStart) / 1000000000.0) < (1.0 / (double) TICK_RATE)) {
 						}
@@ -279,7 +279,7 @@ public class TruckDriver {
 							+ theTruck.getMessagesCreated()
 							+ "  Messages Sent:"
 							+ theTruck.getMessagesSent());
-					System.out.println("Last Message sent: " + theTruck.getLastMessage());
+					System.out.println("Last Message sent: " + theTruck.getLastCreatedMessage());
 					System.out.println("===========================");
 
 					// debug
