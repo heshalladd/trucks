@@ -510,7 +510,7 @@ public class Truck {
 		airUDPSocket.close();
 	}
 
-	private void updateCache(HashMap<String, String> parsedMessageContents,
+	public void updateCache(HashMap<String, String> parsedMessageContents,
 			int messageTruckNumber) throws NumberFormatException,
 			FatalTruckException {
 		if (truckInitialized[messageTruckNumber - 1]) {
