@@ -15,6 +15,7 @@ public class Controller {
 	public static final int PORT = 10125;
 
 	private static int totalTrucks = 0;
+	// pseudo constant. will be later controlled by args
 	private static int desiredTruckSimPop = 5;
 	private static boolean allTrucksConnected = false;
 	private static boolean runSimulation = false;
@@ -26,7 +27,7 @@ public class Controller {
 		System.out.println("[NORMAL] Launching the controller.");
 
 		// NOTE: port is constant, because there is not
-		// much need for variable port.
+		// much need for variable port at this time.
 		// int port;
 		// port = parsePortFromArgs(args);
 
@@ -51,7 +52,7 @@ public class Controller {
 					// simultaneous connections and therefore better response
 					// times
 
-					new TruckHandler(server.accept()).start();
+					new TruckDaemon(server.accept()).start();
 					totalTrucks++;
 					System.out.println("[NORMAL] " + totalTrucks
 							+ " trucks connected.");
@@ -93,10 +94,10 @@ public class Controller {
 		return port;
 	}
 
-	private static class TruckHandler extends Thread {
+	private static class TruckDaemon extends Thread {
 		private Socket socket;
 
-		public TruckHandler(Socket socket) {
+		public TruckDaemon(Socket socket) {
 			this.socket = socket;
 		}
 
@@ -105,75 +106,86 @@ public class Controller {
 				// create input and output tools
 				BufferedReader in = new BufferedReader(new InputStreamReader(
 						socket.getInputStream()));
-				String receivedMessage = "";
-				receivedMessage = in.readLine();
-				int truckNumber = Integer.decode(receivedMessage);
-				System.out
-						.println("[NORMAL] Truck connected with number "
-								+ truckNumber
-								+ " and address "
-								+ socket.getRemoteSocketAddress().toString()
-										.split("/")[1].split(":")[0]);
-				truckAddresses[truckNumber - 1] = socket
-						.getRemoteSocketAddress().toString().split("/")[1]
-						.split(":")[0];
-
-				// wait for all trucks to connect, then send all of the
-				// addresses out.
-				while (!allTrucksConnected) {
-					try {
-						Thread.sleep(100);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
 				PrintWriter out = new PrintWriter(new BufferedWriter(
 						new OutputStreamWriter(socket.getOutputStream())), true);
-				System.out.println("[NORMAL] Sending addresses out to truck "
-						+ truckNumber);
-				for (int i = 0; i < truckAddresses.length; i++) {
-					out.println(truckAddresses[i]);
-				}
-				System.out.println("[NORMAL] Addresses sent to truck "
-						+ truckNumber);
-
-				// enter the loopable portion of handling trucks
 				while (true) {
+					String receivedMessage = "";
+					receivedMessage = in.readLine();
+					int truckNumber = Integer.decode(receivedMessage);
+					System.out.println("[NORMAL] Truck connected with number "
+							+ truckNumber
+							+ " and address "
+							+ socket.getRemoteSocketAddress().toString()
+									.split("/")[1].split(":")[0]);
+					truckAddresses[truckNumber - 1] = socket
+							.getRemoteSocketAddress().toString().split("/")[1]
+							.split(":")[0];
 
-					while (!runSimulation) {
-						Thread.sleep(10);
+					// wait for all trucks to connect, then send all of the
+					// addresses out.
+					while (!allTrucksConnected) {
+						try {
+							Thread.sleep(100);
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
 					}
+
 					System.out
-							.println("[NORMAL] Starting simulation for truck "
+							.println("[NORMAL] Sending addresses out to truck "
 									+ truckNumber);
-					out.println("start");
-					System.out.println("[NORMAL] Truck " + truckNumber
-							+ " started.");
-					// listen to this threads truck connection for a collision
-					// also respond with the status of the simulation
-					while (runSimulation) {
-						receivedMessage = in.readLine();
-						System.out
-								.println("[NORMAL] Received status from truck "
-										+ truckNumber + ": " + receivedMessage);
-						String statusMessage = "ok";
-						if (receivedMessage.equals("collision")) {
-							collision = true;
-							runSimulation = false;
-							collisionForTruck[truckNumber - 1] = true;
-							statusMessage = "collision";
-						}
-
-						if (collision && !collisionForTruck[truckNumber - 1]) {
-							statusMessage = "collision";
-						}
-						System.out
-								.println("[NORMAL] Sending status of environment to truck "
-										+ truckNumber + ": " + statusMessage);
-						out.println(statusMessage);
+					for (int i = 0; i < truckAddresses.length; i++) {
+						out.println(truckAddresses[i]);
 					}
-					System.out.println("[SEVERE] TruckHandler" + truckNumber
-							+ ": Something bad happened to one of the trucks.");
+					System.out.println("[NORMAL] Addresses sent to truck "
+							+ truckNumber);
+
+					// enter the loopable portion of handling trucks
+					while (true) {
+
+						while (!runSimulation) {
+							Thread.sleep(10);
+						}
+						System.out
+								.println("[NORMAL] Starting simulation for truck "
+										+ truckNumber);
+						out.println("start");
+						System.out.println("[NORMAL] Truck " + truckNumber
+								+ " started.");
+						// listen to this threads truck connection for a
+						// collision
+						// also respond with the status of the simulation
+						while (runSimulation) {
+							receivedMessage = in.readLine();
+							System.out
+									.println("[NORMAL] Received status from truck "
+											+ truckNumber
+											+ ": "
+											+ receivedMessage);
+							String statusMessage = "ok";
+							if (receivedMessage.equals("collision")) {
+								collision = true;
+								runSimulation = false;
+								collisionForTruck[truckNumber - 1] = true;
+								statusMessage = "collision";
+							}
+
+							if (collision
+									&& !collisionForTruck[truckNumber - 1]) {
+								statusMessage = "collision";
+							}
+							System.out
+									.println("[NORMAL] Sending status of environment to truck "
+											+ truckNumber
+											+ ": "
+											+ statusMessage);
+							out.println(statusMessage);
+						}
+						System.out
+								.println("[SEVERE] TruckHandler"
+										+ truckNumber
+										+ ": Something bad happened to one of the trucks.");
+					}
 				}
 			}
 

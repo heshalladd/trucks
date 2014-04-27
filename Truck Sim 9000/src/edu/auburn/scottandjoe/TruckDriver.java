@@ -40,7 +40,7 @@ public class TruckDriver {
 
 	// args[0] - "the controller" ip
 	// args[1] - "the controller" port
-	// args[2] - truck number (1 - 5)
+	// args[2] - truck number (1 - X)
 	// args[3] - start pos
 	public static void main(String[] args) throws IOException {
 		String airIP = args[0];
@@ -62,7 +62,7 @@ public class TruckDriver {
 			// open a waiting socket and wait to be started by the server
 			InetAddress addr = InetAddress.getByName(airIP);
 			System.out.println("[NORMAL] Truck " + initTruckNumber
-					+ ": Air IP address: " + addr);
+					+ ": Controller IP address: " + addr);
 			Socket airTCPSock = new Socket(addr, initAirPort);
 
 			// send truck number
@@ -71,23 +71,24 @@ public class TruckDriver {
 			out.println("" + theTruck.getTruckNumber());
 
 			// start a listener for the restart signal
-			new ControllerListener(airTCPSock).start();
+			new ControllerDaemon(airTCPSock).start();
 
 			// start logic loop
 			new TruckLogicLooper(airTCPSock).start();
 
 			// start ui thread
-			new UIThread().start();
+			//NOTE: Disable for performance. Visualizer is the new UI
+			//new UIThread().start();
 
 		} catch (FatalTruckException e) {
 			System.out.println("[CRITICAL] " + e);
 		}
 	}
 
-	private static class ControllerListener extends Thread {
+	private static class ControllerDaemon extends Thread {
 		private Socket airSocket;
 
-		public ControllerListener(Socket airSocket) {
+		public ControllerDaemon(Socket airSocket) {
 			this.airSocket = airSocket;
 		}
 
