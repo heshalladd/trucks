@@ -1,5 +1,7 @@
 package edu.auburn.scottandjoe;
 
+import java.util.HashMap;
+
 public class TruckAI {
 	// imported constants
 	private static final double MAX_ACCELERATION = Truck.MAX_ACCELERATION;
@@ -67,10 +69,17 @@ public class TruckAI {
 
 	public void doAI(Truck theTruck) {
 		// grab truck cache and truck initialized cache for less ugly code
-		// NOTE: MAKE SURE YOU ONLY USE GETTERS ON THESE. CHANGES ARE NOT
-		// GUARANTEED TO BE KEPT BY THE TRUCK THAT CALLED THIS
 		Truck[] truckCache = theTruck.getTruckCache();
 		boolean[] truckInitialized = theTruck.getTruckInitialized();
+		
+		if(theTruck.getProbablyFirst() && theTruck.getLastMessageMapTime() > 0l) {
+			// check if newest update to cache makes this truck not first
+			HashMap<Truck.MessageKeys, String> lastMessageMap = theTruck.getLastMessageMap();
+			double messagePos = Double.parseDouble(lastMessageMap.get(Truck.MessageKeys.POSITION));
+			if (theTruck.getPos() < messagePos) {
+				theTruck.setProbablyFirst(false);
+			}
+		}
 
 		// switch statement to enter state logic
 		switch (truckAIState) {

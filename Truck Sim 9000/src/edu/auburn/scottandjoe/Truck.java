@@ -6,15 +6,13 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Random;
-import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
-
-import edu.auburn.scottandjoe.Truck.MessageKeys;
 
 public class Truck {
 	// TODO: General: track last status update time for each truck. Disregard
@@ -58,8 +56,10 @@ public class Truck {
 	private int messagesCreated = 0;
 	private int messagesSent = 0;
 	private int malformedMessagesReceived = 0;
+	private long lastMessageMapTime = 0l;
 	private String lastCreatedMessage = "";
 	private String lastForwardedMessage = "";
+	private HashMap<MessageKeys, String> lastMessageMap = null;
 	private DatagramSocket airUDPSocket;
 	private FloodingAlgorithm theFA = null;
 
@@ -78,8 +78,9 @@ public class Truck {
 	private Truck[] truckCache;
 	private int[] truckSequenceCache;
 	private String[] truckAddresses;
+	private long[] lastUpdateTime;
 	// will initialize to false (desired)
-	public static boolean[] truckInitialized = new boolean[5];
+	public static boolean[] truckInitialized;
 
 	// enum for hashmaps
 	public enum MessageKeys {
@@ -96,6 +97,9 @@ public class Truck {
 		truckCache = new Truck[desiredTruckSimPop];
 		truckSequenceCache = new int[desiredTruckSimPop];
 		truckAddresses = new String[desiredTruckSimPop];
+		truckInitialized = new boolean[desiredTruckSimPop];
+		lastUpdateTime = new long[desiredTruckSimPop];
+		Arrays.fill(lastUpdateTime, System.currentTimeMillis());
 		Random rand = new Random();
 		this.truckNumber = truckNumber;
 		if (lane != RANDOMIZE_INT) {
@@ -292,6 +296,14 @@ public class Truck {
 	public String getLastCreatedMessage() {
 		return lastCreatedMessage;
 	}
+	
+	public HashMap<MessageKeys, String> getLastMessageMap() {
+		return lastMessageMap;
+	}
+	
+	public long getLastMessageMapTime() {
+		return lastMessageMapTime;
+	}
 
 	public int getMalformedMessagesReceived() {
 		return malformedMessagesReceived;
@@ -383,6 +395,8 @@ public class Truck {
 		// TODO: if process get hung on this buffer processing, either limit
 		// iterations per call or snapshot the buffer size and limit number of
 		// handles per call by that
+		// TODO: ALTERNATE: call handleMessages from UDPMessage handler instead
+		// of from updateMental()
 		while (!incomingUDPMessages.isEmpty() && theFA != null) {
 			String messageToProcess = incomingUDPMessages.remove();
 			theFA.handleMessage(messageToProcess, this);
@@ -520,6 +534,8 @@ public class Truck {
 	public void updateCache(HashMap<MessageKeys, String> messageMap,
 			int messageTruckNumber) throws NumberFormatException,
 			FatalTruckException {
+		lastMessageMap = messageMap;
+		lastMessageMapTime = System.currentTimeMillis();
 		int truckIndex = messageTruckNumber - 1;
 		if (!truckInitialized[truckIndex]) {
 			// get initialization values
