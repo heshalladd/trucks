@@ -5,74 +5,70 @@ import java.util.HashMap;
 
 public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 	// constants
-	private final int messagesPerSecond = 50;
+	// maximum created messages per second
+	private final int MESSAGES_PER_SECOND = 50;
+	// magical terminating character (should never show up in
+	// normal use anywhere in the message)
+	private final String TERMINATING_CHAR = "]";
 
 	private float lastMessageTime = 0l;
 
 	@Override
 	public void handleMessage(String message, Truck theTruck) {
 		// truncate on character that signifies end of message
-		String messageToProcessTruncated = message.split("]")[0];
-		String[] messageToProcess = messageToProcessTruncated.split(",");
+		String messageTruncated = message.split(TERMINATING_CHAR)[0];
+		String[] messageSplit = messageTruncated.split(",");
 
 		// DEBUG: check length of message in terms of elements (should be
 		// 14)
-		if (messageToProcess.length != 14) {
+		if (messageSplit.length != 14) {
 			theTruck.increaseMalformedMessagesReceived();
 			return;
 		}
 		// determine if message is new
-		int messageTruckNumber = Integer.decode(messageToProcess[7]);
-		int messageSequenceNumber = Integer.decode(messageToProcess[0]);
+		int messageTruckNumber = Integer.decode(messageSplit[7]);
+		int messageSequenceNumber = Integer.decode(messageSplit[0]);
 		if (isMessageNew(messageTruckNumber, messageSequenceNumber, theTruck)) {
 			String forwardedMessage = "";
 			// TODO: prepare Hashmap of message values
-			HashMap<String, String> messageContents = new HashMap<String, String>();
-			truckCache[messageTruckNumber - 1].setSequenceNumber(Integer
-					.decode(message[0]));
-			truckCache[messageTruckNumber - 1].setAcceleration(Double
-					.parseDouble(message[4]));
-			truckCache[messageTruckNumber - 1].setPos(Double
-					.parseDouble(message[5]));
-			truckCache[messageTruckNumber - 1].setSpeed(Double
-					.parseDouble(message[6]));
-			truckCache[messageTruckNumber - 1].setLane(Integer
-					.decode(message[8]));
-			truckCache[messageTruckNumber - 1].setDesiredLane(Integer
-					.decode(message[9]));
-			truckCache[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer
-					.decode(message[10]));
-			truckCache[messageTruckNumber - 1].setConvoyID(message[11]);
-			truckCache[messageTruckNumber - 1].setOrderInConvoy(Integer
-					.decode(message[12]));
-			truckCache[messageTruckNumber - 1].setProbablyFirst(Boolean
-					.parseBoolean(message[13].split("]")[0]));
+			HashMap<Truck.MessageKeys, String> messageMap = new HashMap<Truck.MessageKeys, String>();
+			messageMap.put(Truck.MessageKeys.SEQUENCE_NUMBER, messageSplit[0]);
+			messageMap.put(Truck.MessageKeys.ACCELERATION, messageSplit[4]);
+			messageMap.put(Truck.MessageKeys.POSITION, messageSplit[5]);
+			messageMap.put(Truck.MessageKeys.SPEED, messageSplit[6]);
+			messageMap.put(Truck.MessageKeys.LANE, messageSplit[8]);
+			messageMap.put(Truck.MessageKeys.DESIRED_LANE, messageSplit[9]);
+			messageMap.put(Truck.MessageKeys.DESIRED_PIC, messageSplit[10]);
+			messageMap.put(Truck.MessageKeys.CONVOY_ID, messageSplit[11]);
+			messageMap.put(Truck.MessageKeys.ORDER_IN_CONVOY, messageSplit[12]);
+			messageMap.put(Truck.MessageKeys.PROBABLY_FIRST, messageSplit[13]);
 			// update local cache
 			try {
-				theTruck.updateCache(messageContents, messageTruckNumber);
+				theTruck.updateCache(messageMap, messageTruckNumber);
 			} catch (NumberFormatException e) {
 				e.printStackTrace();
 			} catch (FatalTruckException e) {
 				e.printStackTrace();
 			}
 			// check if not first place
-			if (theTruck.getPos() < Double.parseDouble(messageToProcess[5])) {
+			if (theTruck.getPos() < Double.parseDouble(messageSplit[5])) {
 				theTruck.setProbablyFirst(false);
 			}
 
 			// update previous hop
-			int previousHop = Integer.decode(messageToProcess[3]);
-			messageToProcess[3] = "" + theTruck.getTruckNumber();
-			if (Integer.decode(messageToProcess[3]) != messageTruckNumber) {
+			int previousHop = Integer.decode(messageSplit[3]);
+			messageSplit[3] = "" + theTruck.getTruckNumber();
+			if (Integer.decode(messageSplit[3]) != messageTruckNumber) {
 				theTruck.setLastForwardedMessage(message);
 			}
 			// form the new message as a string
-			for (int i = 0; i < messageToProcess.length; i++) {
-				forwardedMessage += messageToProcess[i];
-				if (i != 0 && i != messageToProcess.length - 1) {
+			for (int i = 0; i < messageSplit.length; i++) {
+				forwardedMessage += messageSplit[i];
+				if (i != messageSplit.length - 1) {
 					forwardedMessage += ",";
 				}
 			}
+			forwardedMessage += TERMINATING_CHAR;
 
 			ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
 			// determine what trucks are valid and in range
@@ -122,8 +118,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 				+ theTruck.getConvoyID() + "," // 11 - convoy UUID
 				+ theTruck.getOrderInConvoy() + "," // 12 - order in the convoy
 				+ theTruck.getProbablyFirst() // 13 - thoughts on being first
-				+ "]"; // magical terminating character (should never show up in
-						// normal use anywhere in the message)
+				+ TERMINATING_CHAR;
 		theTruck.setSequenceNumber(theTruck.getSequenceNumber() + 1);
 		return message;
 	}
@@ -131,7 +126,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 	@Override
 	public void doExtra(Truck theTruck) {
 		// check if it is time to send a message about this truck
-		if (((System.nanoTime() - lastMessageTime) / 1000000000.0) > (1.0 / (double) messagesPerSecond)) {
+		if (((System.nanoTime() - lastMessageTime) / 1000000000.0) > (1.0 / (double) MESSAGES_PER_SECOND)) {
 			// create a message
 			String newMessage = createMessage(theTruck);
 			// update last message time

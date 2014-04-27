@@ -7,11 +7,14 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+
+import edu.auburn.scottandjoe.Truck.MessageKeys;
 
 public class Truck {
 	// TODO: General: track last status update time for each truck. Disregard
@@ -75,11 +78,13 @@ public class Truck {
 	private Truck[] truckCache;
 	private int[] truckSequenceCache;
 	private String[] truckAddresses;
+	// will initialize to false (desired)
+	public static boolean[] truckInitialized = new boolean[5];
 
-	public static boolean[] truckInitialized = new boolean[5]; // will
-																// initialize to
-																// false
-																// (desired)
+	// enum for hashmaps
+	public enum MessageKeys {
+		SEQUENCE_NUMBER, ACCELERATION, POSITION, SPEED, LANE, DESIRED_LANE, DESIRED_PIC, CONVOY_ID, ORDER_IN_CONVOY, PROBABLY_FIRST
+	}
 
 	// initializes a truck object. truck numbering conflicts are not handled,
 	// and are the truck runners responsibility
@@ -271,7 +276,7 @@ public class Truck {
 	public int getDesiredPlaceInConvoy() {
 		return desiredPlaceInConvoy;
 	}
-	
+
 	public int getDesiredTruckSimPop() {
 		return desiredTruckSimPop;
 	}
@@ -287,7 +292,7 @@ public class Truck {
 	public String getLastCreatedMessage() {
 		return lastCreatedMessage;
 	}
-	
+
 	public int getMalformedMessagesReceived() {
 		return malformedMessagesReceived;
 	}
@@ -359,7 +364,7 @@ public class Truck {
 	public int[] getTruckSequenceCache() {
 		return this.truckSequenceCache;
 	}
-	
+
 	public Truck[] getTruckCache() {
 		return truckCache;
 	}
@@ -372,11 +377,12 @@ public class Truck {
 		return truckNumber;
 	}
 
-	// TODO: make sure the bug from pre-post-due-dev is gone (random additions)
-	// TODO: keep the invalid message checks. those are still good
 	public void handleMessages() throws NumberFormatException,
 			FatalTruckException {
 		// check for messages on UDP handler's buffer
+		// TODO: if process get hung on this buffer processing, either limit
+		// iterations per call or snapshot the buffer size and limit number of
+		// handles per call by that
 		while (!incomingUDPMessages.isEmpty() && theFA != null) {
 			String messageToProcess = incomingUDPMessages.remove();
 			theFA.handleMessage(messageToProcess, this);
@@ -387,19 +393,19 @@ public class Truck {
 	public void increaseMalformedMessagesReceived() {
 		malformedMessagesReceived++;
 	}
-	
+
 	public void increaseMessagesCreated() {
 		messagesCreated++;
 	}
-	
+
 	public void increaseMessagesDropped() {
 		messagesDropped++;
 	}
-	
+
 	public void increaseMessagesSent() {
 		messagesSent++;
 	}
-	
+
 	public void increaseMessagesForwarded() {
 		messagesForwarded++;
 	}
@@ -461,7 +467,7 @@ public class Truck {
 	public void setLastCreatedMessage(String message) {
 		this.lastCreatedMessage = message;
 	}
-	
+
 	public void setLastForwardedMessage(String message) {
 		lastForwardedMessage = message;
 	}
@@ -510,50 +516,74 @@ public class Truck {
 		airUDPSocket.close();
 	}
 
-	public void updateCache(HashMap<String, String> parsedMessageContents,
+	// NOTE: This does not check if the sequence number is new.
+	public void updateCache(HashMap<MessageKeys, String> messageMap,
 			int messageTruckNumber) throws NumberFormatException,
 			FatalTruckException {
-		if (truckInitialized[messageTruckNumber - 1]) {
-			truckCache[messageTruckNumber - 1].setSequenceNumber(Integer
-					.decode(message[0]));
-			truckCache[messageTruckNumber - 1].setAcceleration(Double
-					.parseDouble(message[4]));
-			truckCache[messageTruckNumber - 1].setPos(Double
-					.parseDouble(message[5]));
-			truckCache[messageTruckNumber - 1].setSpeed(Double
-					.parseDouble(message[6]));
-			truckCache[messageTruckNumber - 1].setLane(Integer
-					.decode(message[8]));
-			truckCache[messageTruckNumber - 1].setDesiredLane(Integer
-					.decode(message[9]));
-			truckCache[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer
-					.decode(message[10]));
-			truckCache[messageTruckNumber - 1].setConvoyID(message[11]);
-			truckCache[messageTruckNumber - 1].setOrderInConvoy(Integer
-					.decode(message[12]));
-			truckCache[messageTruckNumber - 1].setProbablyFirst(Boolean
-					.parseBoolean(message[13].split("]")[0]));
-		} else {
+		int truckIndex = messageTruckNumber - 1;
+		if (!truckInitialized[truckIndex]) {
+			// get initialization values
+			int lane = Integer.decode(messageMap.get(MessageKeys.LANE));
+			double position = Double.parseDouble(messageMap
+					.get(MessageKeys.POSITION));
+			double speed = Double
+					.parseDouble(messageMap.get(MessageKeys.SPEED));
+			double acceleration = Double.parseDouble(messageMap
+					.get(MessageKeys.ACCELERATION));
+
 			// initialize truck for cache
-			truckCache[messageTruckNumber - 1] = new Truck(messageTruckNumber,
-					Integer.decode(message[8]), Double.parseDouble(message[5]),
-					Double.parseDouble(message[6]),
-					Double.parseDouble(message[4]), null);
-			// add other data
-			truckCache[messageTruckNumber - 1].setSequenceNumber(Integer
-					.decode(message[0]));
-			truckCache[messageTruckNumber - 1].setDesiredLane(Integer
-					.decode(message[9]));
-			truckCache[messageTruckNumber - 1].setDesiredPlaceInConvoy(Integer
-					.decode(message[10]));
-			truckCache[messageTruckNumber - 1].setConvoyID(message[11]);
-			truckCache[messageTruckNumber - 1].setOrderInConvoy(Integer
-					.decode(message[12]));
-			truckCache[messageTruckNumber - 1].setProbablyFirst(Boolean
-					.parseBoolean(message[13].split("]")[0]));
-			truckInitialized[messageTruckNumber - 1] = true;
+			truckCache[truckIndex] = new Truck(messageTruckNumber, lane,
+					position, speed, acceleration, null, desiredTruckSimPop);
+			truckInitialized[truckIndex] = true;
 		}
-		truckSequenceCache[messageTruckNumber - 1] = Integer.decode(message[0]);
+		Iterator<MessageKeys> mapIterator = messageMap.keySet().iterator();
+		while (mapIterator.hasNext()) {
+			MessageKeys key = mapIterator.next();
+			switch (key) {
+			case SEQUENCE_NUMBER:
+				int sequenceNumber = Integer.decode(messageMap.get(key));
+				truckCache[truckIndex].setSequenceNumber(sequenceNumber);
+				truckSequenceCache[truckIndex] = sequenceNumber;
+				break;
+			case ACCELERATION:
+				double acceleration = Double.parseDouble(messageMap.get(key));
+				truckCache[truckIndex].setAcceleration(acceleration);
+				break;
+			case CONVOY_ID:
+				truckCache[truckIndex].setConvoyID(messageMap.get(key));
+				break;
+			case DESIRED_LANE:
+				int desiredLane = Integer.decode(messageMap.get(key));
+				truckCache[truckIndex].setDesiredLane(desiredLane);
+				break;
+			case DESIRED_PIC:
+				int desiredPIC = Integer.decode(messageMap.get(key));
+				truckCache[truckIndex].setDesiredPlaceInConvoy(desiredPIC);
+				break;
+			case LANE:
+				int lane = Integer.decode(messageMap.get(key));
+				truckCache[truckIndex].setLane(lane);
+				break;
+			case ORDER_IN_CONVOY:
+				int orderInConvoy = Integer.decode(messageMap.get(key));
+				truckCache[truckIndex].setOrderInConvoy(orderInConvoy);
+				break;
+			case POSITION:
+				double position = Double.parseDouble(messageMap.get(key));
+				truckCache[truckIndex].setPos(position);
+				break;
+			case PROBABLY_FIRST:
+				boolean probFirst = Boolean.parseBoolean(messageMap.get(key));
+				truckCache[truckIndex].setProbablyFirst(probFirst);
+				break;
+			case SPEED:
+				double speed = Double.parseDouble(messageMap.get(key));
+				truckCache[truckIndex].setSpeed(speed);
+				break;
+			default:
+				break;
+			}
+		}
 	}
 
 	public void updateMental() throws FatalTruckException {
