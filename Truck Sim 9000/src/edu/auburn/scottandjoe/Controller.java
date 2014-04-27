@@ -15,6 +15,7 @@ public class Controller {
 	public static final int PORT = 10125;
 
 	private static int totalTrucks = 0;
+	private static int desiredTruckSimPop = 5;
 	private static boolean allTrucksConnected = false;
 	private static boolean runSimulation = false;
 	private static boolean collision = false;
@@ -54,7 +55,7 @@ public class Controller {
 					totalTrucks++;
 					System.out.println("[NORMAL] " + totalTrucks
 							+ " trucks connected.");
-					if (totalTrucks == 5) {
+					if (totalTrucks == desiredTruckSimPop) {
 						allTrucksConnected = true;
 					}
 				}

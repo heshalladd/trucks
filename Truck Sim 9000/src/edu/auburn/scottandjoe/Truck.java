@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -53,10 +54,12 @@ public class Truck {
 	private int messagesDropped = 0;
 	private int messagesCreated = 0;
 	private int messagesSent = 0;
+	private int malformedMessagesReceived = 0;
 	private long lastMessageTime = 0l;
 	private String lastMessage = "";
 	private String lastMessageToForward = "";
 	private DatagramSocket airUDPSocket;
+	private FloodingAlgorithm theFA = null;
 
 	// truck properties
 	private double acceleration;
@@ -82,7 +85,9 @@ public class Truck {
 	// initializes a truck object. truck numbering conflicts are not handled,
 	// and are the truck runners responsibility
 	public Truck(int truckNumber, int lane, double pos, double speed,
-			double acceleration) throws FatalTruckException {
+			double acceleration, FloodingAlgorithm FA)
+			throws FatalTruckException {
+		this.theFA = FA;
 		Random rand = new Random();
 		this.truckNumber = truckNumber;
 		if (lane != RANDOMIZE_INT) {
@@ -234,18 +239,6 @@ public class Truck {
 
 	}
 
-	public String createCSVMessage(int previousHop, int sourcePort,
-			String sourceAddress) {
-		String message = "" + sequenceNumber + "," + sourceAddress + ","
-				+ sourcePort + "," + previousHop + "," + acceleration + ","
-				+ pos + "," + speed + "," + truckNumber + "," + lane + ","
-				+ desiredLane + "," + desiredPlaceInConvoy + "," + convoyID
-				+ "," + orderInConvoy + "," + probablyFirst + "]";
-		sequenceNumber++;
-		return message;
-
-	}
-
 	public void explode(String reason) throws FatalTruckException {
 		throw new FatalTruckException(reason);
 	}
@@ -344,6 +337,10 @@ public class Truck {
 		return speed;
 	}
 
+	public String[] getTruckAddresses() {
+		return truckAddresses;
+	}
+
 	public int getTruckAIState() {
 		return this.theAI.getAIState();
 	}
@@ -364,150 +361,17 @@ public class Truck {
 	// TODO: keep the invalid message checks. those are still good
 	public void handleMessages() throws NumberFormatException,
 			FatalTruckException {
-		// if this is the first time, let everyone know your starting position
-		if (lastMessageTime == 0l) {
-			// create a message
-			String newMessage = createCSVMessage(truckNumber,
-					airUDPSocket.getPort(), new String("0"));
-			// update last message time
-			//lastMessageTime = System.nanoTime();
-			sendGenesisBroadcast(newMessage);
-			lastMessage = newMessage;
-		}
-
 		// check for messages on UDP handler's buffer
-		if (!incomingUDPMessages.isEmpty()) {
-			String[] messageToProcess;
-			String messageToProcessWhole;
-			String tempMessage = "";
-
-			while (!incomingUDPMessages.isEmpty()) {
-				messageToProcessWhole = incomingUDPMessages.remove();
-				messageToProcess = messageToProcessWhole.split(",");
-				// truncate last message segment
-
-				// determine if message is new
-				int messageTruckNumber = Integer.decode(messageToProcess[7]);
-				int messageSequenceNumber = Integer.decode(messageToProcess[0]);
-				if (isMessageNew(messageTruckNumber, messageSequenceNumber)) {
-					tempMessage = "";
-					// update local cache
-					updateCache(messageToProcess);
-					// check if not first place
-					if (pos < Double.parseDouble(messageToProcess[5])) {
-						probablyFirst = false;
-					}
-
-					// update previous hop
-					int previousHop = Integer.decode(messageToProcess[3]);
-					messageToProcess[3] = "" + truckNumber;
-					if (Integer.decode(messageToProcess[3]) != messageTruckNumber) {
-						lastMessageToForward = messageToProcessWhole;
-					}
-					// form the new message as a string
-					for (int i = 0; i < messageToProcess.length; i++) {
-						tempMessage += messageToProcess[i];
-						if (i != 0 && i != messageToProcess.length - 1) {
-							tempMessage += ",";
-						}
-					}
-
-					ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
-
-					// determine what trucks are valid and in range
-					for (int i = 0; i < truckCache.length; i++) {
-						if (i != previousHop - 1 && i != truckNumber - 1
-								&& i != messageTruckNumber
-								&& truckInitialized[i]) {
-							trucksInRange.add(truckCache[i]);
-						}
-					}
-
-					// determine whether those messages are going to make it
-					// through
-					if (trucksInRange.size() > 0) {
-						for (int i = 0; i < trucksInRange.size(); i++) {
-							// roll the dice
-							Truck targetTruck = trucksInRange.get(i);
-							if (isMessageSuccessful(targetTruck)) {
-								sendMessage(targetTruck, tempMessage);
-								messagesForwarded++;
-							}
-						}
-					}
-				} else {
-					messagesDropped++;
-				}
-			}
+		while (!incomingUDPMessages.isEmpty() && theFA != null) {
+			String messageToProcess = incomingUDPMessages.remove();
+			theFA.handleMessage(messageToProcess, this);
 		}
 
-		// check if it is time to send a message about this truck
-		if (((System.nanoTime() - lastMessageTime) / 1000000000.0) > (1.0 / (double) messagesPerSecond)) {
-			// create a message
-			String newMessage = createCSVMessage(truckNumber,
-					airUDPSocket.getPort(), new String("0"));
-			// update last message time
-			lastMessageTime = System.nanoTime();
-			messagesCreated++;
-
-			// find trucks in range
-			ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
-
-			// determine what trucks are in range
-			for (int i = 0; i < truckCache.length; i++) {
-				if (i != truckNumber - 1 && truckInitialized[i]) {
-					trucksInRange.add(truckCache[i]);
-				}
-			}
-			if (trucksInRange.size() > 0) {
-				for (int i = 0; i < trucksInRange.size(); i++) {
-					// roll the dice
-					Truck targetTruck = trucksInRange.get(i);
-					if (isMessageSuccessful(targetTruck)) {
-						sendMessage(targetTruck, newMessage);
-						messagesSent++;
-						lastMessage = newMessage;
-					}
-				}
-			}
-		}
 	}
 
 	private boolean isMessageNew(int messageTruckNumber,
 			int messageSequenceNumber) {
 		return (truckSequenceCache[messageTruckNumber - 1] < messageSequenceNumber && messageTruckNumber != truckNumber);
-	}
-
-	private void sendGenesisBroadcast(String message) {
-		// get address and port for sending stuff via
-		// UDP.
-		for (int i = 0; i < truckAddresses.length; i++) {
-			byte[] outBoundPacketBuf = new byte[4028];
-			outBoundPacketBuf = message.getBytes();
-			DatagramSocket forwardUDPSock;
-			try {
-				forwardUDPSock = new DatagramSocket();
-				InetAddress truckDestination = InetAddress
-						.getByName(truckAddresses[i]);
-				DatagramPacket outBoundUDPPacket = new DatagramPacket(
-						outBoundPacketBuf, outBoundPacketBuf.length,
-						truckDestination, PORT);
-
-				// forward transmissions (that qualify) to
-				// their
-				// hosts as UDP.
-				forwardUDPSock.send(outBoundUDPPacket);
-
-				// close socket
-				forwardUDPSock.close();
-			} catch (SocketException e) {
-				e.printStackTrace();
-			} catch (UnknownHostException e) {
-				e.printStackTrace();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
 	}
 
 	private void sendMessage(Truck targetTruck, String message) {
@@ -613,7 +477,7 @@ public class Truck {
 		airUDPSocket.close();
 	}
 
-	private void updateCache(String[] message) throws NumberFormatException,
+	private void updateCache(HashMap<String, String> parsedMessageContents) throws NumberFormatException,
 			FatalTruckException {
 		int messageTruckNumber = Integer.decode(message[7]);
 		if (truckInitialized[messageTruckNumber - 1]) {
@@ -641,7 +505,7 @@ public class Truck {
 			truckCache[messageTruckNumber - 1] = new Truck(messageTruckNumber,
 					Integer.decode(message[8]), Double.parseDouble(message[5]),
 					Double.parseDouble(message[6]),
-					Double.parseDouble(message[4]));
+					Double.parseDouble(message[4]), null);
 			// add other data
 			truckCache[messageTruckNumber - 1].setSequenceNumber(Integer
 					.decode(message[0]));
@@ -659,18 +523,20 @@ public class Truck {
 		truckSequenceCache[messageTruckNumber - 1] = Integer.decode(message[0]);
 	}
 
-	public void updateDesires() throws FatalTruckException {
+	public void updateMental() throws FatalTruckException {
 		handleMessages();
+		theFA.doExtra(this);
 		// call the truck AI class
-		// NOTE: only call this once the caches are stable for best results
+		// NOTE: only call this once the caches are stable for best results.
 		theAI.doAI(this);
+
 	}
 
-	// collisions of trucks is a responsibility of the air to decide
+	// collisions of trucks is a responsibility of the controller to decide
 	public int updatePhysical() throws FatalTruckException {
 		// update position
 		updatePosition();
-		// uncomment update speed
+		// update speed
 		accelerate();
 		// update lane
 		if (desiredLane != lane && intentChangeLane && !changingLanes) {
@@ -684,12 +550,14 @@ public class Truck {
 		return 1;
 	}
 
-	// note: update position before acceleration
+	// NOTE: update position before acceleration
 	private void updatePosition() {
 		// update truck position relative to speed and tick rate
 		this.pos = this.pos + (this.speed / TICK_RATE);
 	}
 
+	// NOTE: This thread will allow for lane changing without locking up logic.
+	// Is not used yet.
 	private class LaneChanger extends Thread {
 		private int newLane;
 
@@ -716,7 +584,7 @@ public class Truck {
 		}
 
 		public void run() {
-			byte[] receivedData = new byte[4024];
+			byte[] receivedData = new byte[4096];
 			try {
 				while (true) {
 					DatagramPacket receivedPacket = new DatagramPacket(
