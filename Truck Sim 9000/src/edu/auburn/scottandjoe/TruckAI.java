@@ -71,11 +71,14 @@ public class TruckAI {
 		// grab truck cache and truck initialized cache for less ugly code
 		Truck[] truckCache = theTruck.getTruckCache();
 		boolean[] truckInitialized = theTruck.getTruckInitialized();
-		
-		if(theTruck.getProbablyFirst() && theTruck.getLastMessageMapTime() > 0l) {
+
+		if (theTruck.getProbablyFirst()
+				&& theTruck.getLastMessageMapTime() > 0l) {
 			// check if newest update to cache makes this truck not first
-			HashMap<Truck.MessageKeys, String> lastMessageMap = theTruck.getLastMessageMap();
-			double messagePos = Double.parseDouble(lastMessageMap.get(Truck.MessageKeys.POSITION));
+			HashMap<Truck.MessageKeys, String> lastMessageMap = theTruck
+					.getLastMessageMap();
+			double messagePos = Double.parseDouble(lastMessageMap
+					.get(Truck.MessageKeys.POSITION));
 			if (theTruck.getPos() < messagePos) {
 				theTruck.setProbablyFirst(false);
 			}

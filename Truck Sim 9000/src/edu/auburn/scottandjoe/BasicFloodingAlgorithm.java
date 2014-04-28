@@ -9,14 +9,18 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 	private final int MESSAGES_PER_SECOND = 50;
 	// magical terminating character (should never show up in
 	// normal use anywhere in the message)
-	private final String TERMINATING_CHAR = "]";
+	private final String TERMINATING_STRING = Controller.TERMINATING_STRING;
 
 	private float lastMessageTime = 0l;
+
+	public BasicFloodingAlgorithm() {
+		// constructor needed because static would be hard for states
+	}
 
 	@Override
 	public void handleMessage(String message, Truck theTruck) {
 		// truncate on character that signifies end of message
-		String messageTruncated = message.split(TERMINATING_CHAR)[0];
+		String messageTruncated = message.split(TERMINATING_STRING)[0];
 		String[] messageSplit = messageTruncated.split(",");
 
 		// DEBUG: check length of message in terms of elements (should be
@@ -68,7 +72,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 					forwardedMessage += ",";
 				}
 			}
-			forwardedMessage += TERMINATING_CHAR;
+			forwardedMessage += TERMINATING_STRING;
 
 			ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
 			// determine what trucks are valid and in range
@@ -105,7 +109,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 				+ theTruck.getSequenceNumber() + ","
 				// 1 - source IP address
 				+ theTruck.getTruckAddresses()[theTruck.getTruckNumber()] + ","
-				+ Controller.PORT + "," // 2 - source port
+				+ Controller.TRUCK_PORT + "," // 2 - source port
 				+ theTruck.getTruckNumber() + "," // 3 - previous hop
 				+ theTruck.getAcceleration() + "," // 4 - acceleration
 				+ theTruck.getPos() + "," // 5 - position
@@ -118,7 +122,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 				+ theTruck.getConvoyID() + "," // 11 - convoy UUID
 				+ theTruck.getOrderInConvoy() + "," // 12 - order in the convoy
 				+ theTruck.getProbablyFirst() // 13 - thoughts on being first
-				+ TERMINATING_CHAR;
+				+ TERMINATING_STRING;
 		theTruck.setSequenceNumber(theTruck.getSequenceNumber() + 1);
 		return message;
 	}

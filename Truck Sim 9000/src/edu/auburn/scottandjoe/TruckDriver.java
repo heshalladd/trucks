@@ -6,9 +6,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,22 +19,22 @@ import java.util.Comparator;
 import java.util.HashMap;
 
 public class TruckDriver {
-	//imported constants
+	// imported constants
 	private static final int TICK_RATE = Controller.TICK_RATE;
-	
-	//local variables
+	private static final String TERMINATING_STRING = Controller.TERMINATING_STRING;
+
+	// local variables
 	private static boolean running = false;
 	private static boolean collision = false;
 	private static Truck theTruck;
 
 	// variables for reinitializing
-	private static int initAirPort;
 	private static int initTruckNumber;
 	private static int initLane;
 	private static double initPos;
 	private static double initSpeed;
 	private static double initAcceleration;
-	private static PrintWriter out;
+	private static FloodingAlgorithm floodingAlgorithm = null;
 
 	/**
 	 * @param args
@@ -42,92 +45,138 @@ public class TruckDriver {
 	// args[1] - "the controller" port
 	// args[2] - truck number (1 - X)
 	// args[3] - start pos
+	// args[4] - 1 for basic FA, 2 for MPR FA
 	public static void main(String[] args) throws IOException {
-		String airIP = args[0];
-		initAirPort = Integer.decode(args[1]);
-
+		String controllerAddress = args[0];
 		initTruckNumber = Integer.decode(args[2]);
 		initLane = Truck.RANDOMIZE_INT;
 		initPos = Double.parseDouble(args[3]);
+		if (Integer.parseInt(args[4]) == 1) {
+			floodingAlgorithm = new BasicFloodingAlgorithm();
+		} else if (Integer.parseInt(args[4]) == 2) {
+			// TODO: set to the MPR FA
+		}
 		// double pos = Truck.RANDOMIZE_DOUBLE;
 		initSpeed = Truck.RANDOMIZE_DOUBLE;
 		initAcceleration = Truck.RANDOMIZE_DOUBLE;
 		// TODO:add feature: load from config
+
+		// let server know you exist by sending truck number
+		InetAddress addr = InetAddress.getByName(controllerAddress);
+		byte[] outBoundPacketBuf = new byte[4096];
+		outBoundPacketBuf = new String("" + initTruckNumber).getBytes();
+		DatagramSocket forwardUDPSock;
 		try {
-
-			// initialize truck
-			theTruck = new Truck(initTruckNumber, initLane, initPos, initSpeed,
-					initAcceleration);
-
-			// open a waiting socket and wait to be started by the server
-			InetAddress addr = InetAddress.getByName(airIP);
-			System.out.println("[NORMAL] Truck " + initTruckNumber
-					+ ": Controller IP address: " + addr);
-			Socket airTCPSock = new Socket(addr, initAirPort);
-
-			// send truck number
-			out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(
-					airTCPSock.getOutputStream())), true);
-			out.println("" + theTruck.getTruckNumber());
-
-			// start a listener for the restart signal
-			new ControllerDaemon(airTCPSock).start();
-
-			// start logic loop
-			new TruckLogicLooper(airTCPSock).start();
-
-			// start ui thread
-			//NOTE: Disable for performance. Visualizer is the new UI
-			//new UIThread().start();
-
-		} catch (FatalTruckException e) {
-			System.out.println("[CRITICAL] " + e);
+			forwardUDPSock = new DatagramSocket();
+			DatagramPacket outBoundUDPPacket = new DatagramPacket(
+					outBoundPacketBuf, outBoundPacketBuf.length, addr,
+					Controller.DAEMON_PORT);
+			forwardUDPSock.send(outBoundUDPPacket);
+			forwardUDPSock.close();
+		} catch (SocketException e) {
+			e.printStackTrace();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+
+		// start the daemon for receiving requests and responses from controller
+		new ControllerDaemon(controllerAddress).start();
+
+		// start logic loop
+		new TruckLogicLooper().start();
+
+		// start ui thread
+		// NOTE: Disable for performance. Visualizer is the new UI
+		// new UIThread().start();
 	}
 
 	private static class ControllerDaemon extends Thread {
-		private Socket airSocket;
+		private String controllerAddress;
 
-		public ControllerDaemon(Socket airSocket) {
-			this.airSocket = airSocket;
+		public ControllerDaemon(String controllerAddress) {
+			this.controllerAddress = controllerAddress;
 		}
 
 		public void run() {
 			try {
-				BufferedReader in = new BufferedReader(new InputStreamReader(
-						airSocket.getInputStream()));
-				// receive the truck addresses
-				String[] receivedAddresses = new String[5];
-				System.out.print("[NORMAL] Receiving Addresses: ");
-				for (int i = 0; i < receivedAddresses.length; i++) {
-					receivedAddresses[i] = in.readLine();
-					System.out.print(i + "-" + receivedAddresses[i] + "\n");
-				}
-				System.out.println("[NORMAL] All addresses received.");
-				// set the truck addresses in the truck object
-				theTruck.setTruckAddresses(receivedAddresses);
-				// begin loopable logic for controller to truckdriver talking
-				while (true) {
-					while (!running) {
-						String startMessage = in.readLine();
-						if (startMessage.equals("start")) {
-							collision = false;
-							running = true;
+				try {
+					new ControllerRequester(controllerAddress).start();
+					// input for reading requests
+					DatagramSocket daemonSocket = new DatagramSocket();
+					InetAddress remoteAddress = InetAddress
+							.getByName(controllerAddress);
+					daemonSocket.connect(remoteAddress, Controller.DAEMON_PORT);
+
+					while (true) {
+						String receivedMessageWhole = "";
+						byte[] receivedData = new byte[4096];
+						DatagramPacket receivedPacket = new DatagramPacket(
+								receivedData, receivedData.length);
+						daemonSocket.receive(receivedPacket);
+						receivedMessageWhole = new String(
+								receivedPacket.getData());
+						String receivedMessageTerminated = receivedMessageWhole
+								.split(TERMINATING_STRING)[0];
+						String[] receivedMessage = receivedMessageTerminated
+								.split(",");
+
+						int messageType = Integer.decode(receivedMessage[0]);
+						int requestType = Integer.decode(receivedMessage[1]);
+
+						if ((int) messageType == (int) Controller.REQUEST) {
+							// handle request
+							switch (requestType) {
+							case Controller.START_SIM:
+								running = true;
+								// get the number of trucks
+								int desiredTruckSimPop = Integer
+										.parseInt(receivedMessage[2]);
+								// initialize truck
+								theTruck = new Truck(initTruckNumber, initLane,
+										initPos, initSpeed, initAcceleration,
+										floodingAlgorithm, desiredTruckSimPop);
+								theTruck.startUDPListener();
+								break;
+							case Controller.END_SIM:
+								running = false;
+								theTruck.stopUDPListener();
+								break;
+							default:
+								break;
+							}
+						} else if ((int) messageType == (int) Controller.RESPONSE) {
+							// handle incoming data
+							switch (requestType) {
+							case Controller.POS_CACHE:
+
+								break;
+							case Controller.ADDR_CACHE:
+								String[] receivedAddresses = new String[desiredTruckSimPop];
+								System.out
+										.print("[NORMAL] Receiving Addresses: ");
+								for (int i = 0; i < receivedAddresses.length; i++) {
+									receivedAddresses[i] = receivedMessage[i + 2];
+									System.out.print(i + "-"
+											+ receivedAddresses[i] + "\n");
+								}
+								System.out
+										.println("[NORMAL] All addresses received.");
+								// set the truck addresses in the truck object
+								theTruck.setTruckAddresses(receivedAddresses);
+								break;
+							default:
+								break;
+							}
 						}
 					}
-					theTruck = new Truck(initTruckNumber, initLane, initPos,
-							initSpeed, initAcceleration);
-					theTruck.startUDPListener(new DatagramSocket(initAirPort));
-					// set the truck addresses in the truck object
-					theTruck.setTruckAddresses(receivedAddresses);
-					while (running) {
-						String crashMessage = in.readLine();
-						if (crashMessage.equals("collision")) {
-							running = false;
-							collision = true;
-							System.out.println("COLLISION! BOOM!");
-						}
-					}
+				} catch (SocketException e) {
+					e.printStackTrace();
+				} catch (UnknownHostException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			} catch (IOException e) {
 				System.out
@@ -139,17 +188,25 @@ public class TruckDriver {
 
 	}
 
-	private static class TruckLogicLooper extends Thread {
-		private Socket airSocket;
+	private static class ControllerRequester extends Thread {
+		private String controllerAddress;
 
-		public TruckLogicLooper(Socket airSocket) {
-			this.airSocket = airSocket;
+		public ControllerRequester(String controllerAddress) {
+			this.controllerAddress = controllerAddress;
+		}
+
+		public void run() {
+
+		}
+	}
+
+	private static class TruckLogicLooper extends Thread {
+
+		public TruckLogicLooper() {
 		}
 
 		public void run() {
 			long tickStart = 0l;
-			final int STATUS_TICK_INTERVAL = 5;
-			int statusTickCount = 0;
 			// TODO: add some tools to save and output average or current tick
 			// computation time
 			// in order to better fine tune the tick rate as low as possible
@@ -171,26 +228,12 @@ public class TruckDriver {
 						tickStart = System.nanoTime();
 						theTruck.updateMental();
 						theTruck.updatePhysical();
+						// TODO: request pos cache
 						while (((System.nanoTime() - tickStart) / 1000000000.0) < (1.0 / (double) TICK_RATE)) {
 						}
 					}
-
-					if (statusTickCount < STATUS_TICK_INTERVAL) {
-						statusTickCount++;
-					} else {
-						statusTickCount = 0;
-						out.println("ok");
-					}
 				} catch (FatalTruckException e) {
-					PrintWriter out;
-					try {
-						out = new PrintWriter(new BufferedWriter(
-								new OutputStreamWriter(
-										airSocket.getOutputStream())), true);
-						out.println("collision");
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
+					// TODO: handle
 				}
 			}
 		}
@@ -198,7 +241,7 @@ public class TruckDriver {
 
 	private static class UIThread extends Thread {
 		long UITickStart = 0l;
-		private static final int UI_TICK_RATE= 10;
+		private static final int UI_TICK_RATE = 10;
 
 		public UIThread() {
 		}
@@ -216,7 +259,7 @@ public class TruckDriver {
 			DecimalFormat df = new DecimalFormat("#0.00");
 			while (true) {
 				UITickStart = System.nanoTime();
-				//boolean debug = false;
+				// boolean debug = false;
 				if (running) {
 					ArrayList<Truck> truckList = new ArrayList<Truck>();
 					for (int i = 0; i < theTruck.getTruckInitialized().length; i++) {
@@ -278,9 +321,9 @@ public class TruckDriver {
 							+ theTruck.getMessagesDropped()
 							+ "  Messages Created:"
 							+ theTruck.getMessagesCreated()
-							+ "  Messages Sent:"
-							+ theTruck.getMessagesSent());
-					System.out.println("Last Message sent: " + theTruck.getLastCreatedMessage());
+							+ "  Messages Sent:" + theTruck.getMessagesSent());
+					System.out.println("Last Message sent: "
+							+ theTruck.getLastCreatedMessage());
 					System.out.println("===========================");
 
 					// debug
@@ -314,7 +357,7 @@ public class TruckDriver {
 					}
 				} else {
 					try {
-						Thread.sleep((long)((1.0 / (double)UI_TICK_RATE) / 2.0));
+						Thread.sleep((long) ((1.0 / (double) UI_TICK_RATE) / 2.0));
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}

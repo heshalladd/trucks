@@ -36,7 +36,7 @@ public class Truck {
 
 	// imported constants
 	private static final int TICK_RATE = Controller.TICK_RATE;
-	private static final int PORT = Controller.PORT;
+	private static final int PORT = Controller.TRUCK_PORT;
 
 	// truck meta and ai related variables
 	private int desiredTruckSimPop;
@@ -60,7 +60,7 @@ public class Truck {
 	private String lastCreatedMessage = "";
 	private String lastForwardedMessage = "";
 	private HashMap<MessageKeys, String> lastMessageMap = null;
-	private DatagramSocket airUDPSocket;
+	private DatagramSocket truckUDPSocket;
 	private FloodingAlgorithm theFA = null;
 
 	// truck properties
@@ -296,11 +296,11 @@ public class Truck {
 	public String getLastCreatedMessage() {
 		return lastCreatedMessage;
 	}
-	
+
 	public HashMap<MessageKeys, String> getLastMessageMap() {
 		return lastMessageMap;
 	}
-	
+
 	public long getLastMessageMapTime() {
 		return lastMessageMapTime;
 	}
@@ -427,7 +427,7 @@ public class Truck {
 	public void sendMessage(Truck targetTruck, String message) {
 		// get address and port for sending stuff via
 		// UDP.
-		byte[] outBoundPacketBuf = new byte[4028];
+		byte[] outBoundPacketBuf = new byte[4096];
 		outBoundPacketBuf = message.getBytes();
 		DatagramSocket forwardUDPSock;
 		try {
@@ -518,16 +518,21 @@ public class Truck {
 		this.truckNumber = truckNumber;
 	}
 
-	public void startUDPListener(DatagramSocket airUDPSocket) {
+	public void startUDPListener() {
 		// start listener
-		this.airUDPSocket = airUDPSocket;
+		try {
+			this.truckUDPSocket = new DatagramSocket(PORT);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		new UDPMessageListener().start();
 	}
 
 	public void stopUDPListener() {
 		// close socket to force the listener to stop blocking and quit to catch
 		// statement and end the thread
-		airUDPSocket.close();
+		truckUDPSocket.close();
 	}
 
 	// NOTE: This does not check if the sequence number is new.
@@ -668,12 +673,11 @@ public class Truck {
 				while (true) {
 					DatagramPacket receivedPacket = new DatagramPacket(
 							receivedData, receivedData.length);
-					airUDPSocket.receive(receivedPacket);
+					truckUDPSocket.receive(receivedPacket);
 					// System.out.println("[NORMAL] Received packet:"
 					// + new String(receivedPacket.getData()));
 					incomingUDPMessages
-							.add(new String(receivedPacket.getData())
-									.split("\n")[0]);
+							.add(new String(receivedPacket.getData()));
 				}
 			} catch (IOException e) {
 				System.out
