@@ -14,7 +14,7 @@ public class Receiver {
 	public void startUDPListener() {
 		try {
 			System.out.println("Starting UDP Listener...");
-			DatagramSocket serverSocket = new DatagramSocket(9876);
+			DatagramSocket serverSocket = new DatagramSocket(10127);
 			byte[] receiveData = new byte[1024];
 			int number;
 			int locationX;
