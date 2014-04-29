@@ -12,7 +12,7 @@ import java.util.Scanner;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Controller {
-	public static final int TICK_RATE = 100;
+	public static final int TICK_RATE = 200;
 	public static final int TRUCK_PORT = 10125;
 	public static final int DAEMON_PORT = 10126;
 	public static final int MAX_BUFFER_SIZE = 4096;

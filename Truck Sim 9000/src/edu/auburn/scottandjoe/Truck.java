@@ -47,6 +47,7 @@ public class Truck {
 	private static ConcurrentLinkedQueue<String> incomingUDPMessages = new ConcurrentLinkedQueue<String>();
 	private boolean changingLanes = false;
 	private boolean probablyFirst = false;
+	private long lastAIProcessTime = 0l;
 	private TruckAI theAI = new TruckAI();
 
 	// message meta
@@ -58,6 +59,7 @@ public class Truck {
 	private int messagesFailed = 0;
 	private int malformedMessagesReceived = 0;
 	private long lastMessageMapTime = 0l;
+	private long lastMessageInterval = 0l;
 	private String lastCreatedMessage = "";
 	private String lastForwardedMessage = "";
 	private HashMap<MessageKeys, String> lastMessageMap = null;
@@ -101,8 +103,10 @@ public class Truck {
 		truckCache = new Truck[desiredTruckSimPop];
 		truckPosCache = new double[desiredTruckSimPop];
 		truckSequenceCache = new int[desiredTruckSimPop];
+		Arrays.fill(truckSequenceCache, 0);
 		truckAddresses = new String[desiredTruckSimPop];
 		truckInitialized = new boolean[desiredTruckSimPop];
+		Arrays.fill(truckInitialized, false);
 		lastUpdateTime = new long[desiredTruckSimPop];
 		Arrays.fill(lastUpdateTime, System.currentTimeMillis());
 		Random rand = new Random();
@@ -238,6 +242,10 @@ public class Truck {
 	public int getLane() {
 		return lane;
 	}
+	
+	public long getLastAIProcessTime() {
+		return lastAIProcessTime;
+	}
 
 	public String getLastForwardedMessage() {
 		return lastForwardedMessage;
@@ -245,6 +253,10 @@ public class Truck {
 
 	public String getLastCreatedMessage() {
 		return lastCreatedMessage;
+	}
+	
+	public long getLastMessageInterval() {
+		return lastMessageInterval;
 	}
 
 	public HashMap<MessageKeys, String> getLastMessageMap() {
@@ -468,12 +480,20 @@ public class Truck {
 		intentChangeLane = true;
 	}
 
+	public void setLastAIProcessTime(long timeDiff) {
+		this.lastAIProcessTime = timeDiff;
+	}
+	
 	public void setLastCreatedMessage(String message) {
 		this.lastCreatedMessage = message;
 	}
 
 	public void setLastForwardedMessage(String message) {
 		lastForwardedMessage = message;
+	}
+	
+	public void setLastMessageInterval(long timeDiff) {
+		this.lastMessageInterval = timeDiff;
 	}
 
 	public void setOrderInConvoy(int orderInConvoy) {
@@ -606,7 +626,10 @@ public class Truck {
 		theFA.doExtra(this);
 		// call the truck AI class
 		// NOTE: only call this once the caches are stable for best results.
+		long startTime = System.nanoTime();
 		theAI.doAI(this);
+		long endTime = System.nanoTime();
+		lastAIProcessTime = (endTime - startTime)/1000000;
 
 	}
 

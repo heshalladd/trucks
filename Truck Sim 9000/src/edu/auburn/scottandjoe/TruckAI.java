@@ -19,12 +19,12 @@ public class TruckAI {
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
-	private static final double CATCHING_SPEED = 31.5;
-	private static final double SOLO_CATCHING_SPEED = 31.5;
-	private static final double MERGING_CATCHING_SPEED = 31.5;
-	private static final double MULTI_CATCHING_SPEED = 31.5;
-	private static final double MIN_CONVOY_GAP = 15.0;
-	private static final double MAX_CONVOY_GAP = 25.0;
+	private static final double CATCHING_SPEED = 34.2;
+	private static final double SOLO_CATCHING_SPEED = 34.2;
+	private static final double MERGING_CATCHING_SPEED = 34.2;
+	private static final double MULTI_CATCHING_SPEED = 34.2;
+	private static final double MIN_CONVOY_GAP = 10.0;
+	private static final double MAX_CONVOY_GAP = 20.0;
 	private static final double GAS_PEDAL_ACCEL_VALUE = (0.1 / (double) TICK_RATE);
 	private static final double BRAKE_PEDAL_DECEL_VALUE = (0.3 / (double) TICK_RATE);
 	// truck state magic number constants
@@ -131,9 +131,9 @@ public class TruckAI {
 			break;
 
 		case SOLO_CONVOY:
-			// if there is a truck in this convoy with position 5, become full
+			// if there is a truck in this convoy with position equal to population size, become full
 			// convoy
-			if (theTruck.getConvoySize() == 5) {
+			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 				truckAIState = FULL_CONVOY;
 			}
 			// search for a truck ahead
@@ -164,9 +164,9 @@ public class TruckAI {
 			break;
 
 		case MULTI_CONVOY:
-			// if there is a truck in this convoy with position 5, become full
+			// if there is a truck in this convoy with position equal to the population, become full
 			// convoy
-			if (theTruck.getConvoySize() == 5) {
+			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 				truckAIState = FULL_CONVOY;
 			}
 			// if the leader of the convoy isn't the first truck,
@@ -208,9 +208,9 @@ public class TruckAI {
 			break;
 
 		case MERGING_CONVOY:
-			// if there is a truck in this convoy with position 5, become full
+			// if there is a truck in this convoy with position equal to the population, become full
 			// convoy
-			if (theTruck.getConvoySize() == 5) {
+			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 				truckAIState = FULL_CONVOY;
 			}
 

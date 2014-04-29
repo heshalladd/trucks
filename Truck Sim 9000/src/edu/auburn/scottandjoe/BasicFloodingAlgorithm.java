@@ -5,12 +5,12 @@ import java.util.HashMap;
 public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 	// constants
 	// maximum created messages per second
-	private final int MESSAGES_PER_SECOND = 50;
+	private final int MESSAGES_PER_SECOND = 110;
 	// magical terminating character (should never show up in
 	// normal use anywhere in the message)
 	private final String TERMINATING_STRING = Controller.TERMINATING_STRING;
 
-	private float lastMessageTime = 0l;
+	private long lastMessageTime = 0l;
 
 	public BasicFloodingAlgorithm() {
 		// constructor needed because static would be hard for states
@@ -33,7 +33,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 		int messageSequenceNumber = Integer.decode(messageSplit[0]);
 		if (isMessageNew(messageTruckNumber, messageSequenceNumber, theTruck)) {
 			String forwardedMessage = "";
-			// TODO: prepare Hashmap of message values
+			//prepare Hashmap of message values
 			HashMap<Truck.MessageKeys, String> messageMap = new HashMap<Truck.MessageKeys, String>();
 			messageMap.put(Truck.MessageKeys.SEQUENCE_NUMBER, messageSplit[0]);
 			messageMap.put(Truck.MessageKeys.ACCELERATION, messageSplit[4]);
@@ -122,7 +122,9 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 			// create a message
 			String newMessage = createMessage(theTruck);
 			// update last message time
-			lastMessageTime = System.nanoTime();
+			long theTime = System.nanoTime();
+			theTruck.setLastMessageInterval((theTime - lastMessageTime)/1000000);
+			lastMessageTime = theTime;
 			theTruck.increaseMessagesCreated();
 
 			for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
