@@ -327,7 +327,7 @@ public class TruckDriver {
 					// while loop to do tick limited truck updates
 					while (running && initialized) {
 						long theTime = System.nanoTime();
-						lastTickInterval = (theTime - tickStart)/1000000;
+						lastTickInterval = (theTime - tickStart) / 1000000;
 						tickStart = theTime;
 						theTruck.updateMental();
 						theTruck.updatePhysical();
@@ -335,7 +335,7 @@ public class TruckDriver {
 								+ Controller.REQUEST + ","
 								+ Controller.POS_CACHE + TERMINATING_STRING);
 						tickEnd = System.nanoTime();
-						lastTickTime = (tickEnd - tickStart)/1000000;
+						lastTickTime = (tickEnd - tickStart) / 1000000;
 						while (((System.nanoTime() - tickStart) / 1000000000.0) < (1.0 / (double) TICK_RATE)) {
 						}
 					}
@@ -408,13 +408,10 @@ public class TruckDriver {
 					System.out.print(ANSI_CLS + ANSI_HOME);
 					System.out.flush();
 
-					System.out.println("===========================");
 					System.out.println("Truck:         "
 							+ theTruck.getTruckNumber());
 					System.out.println("Pos:           "
 							+ df.format(theTruck.getPos()));
-					System.out.println("Next Trk Pos:  "
-							+ df.format(theTruck.getNextTruckPos()));
 					System.out.println("next Trk Dist: "
 							+ df.format(theTruck.getNextTruckPos()
 									- theTruck.getPos()));
@@ -434,6 +431,16 @@ public class TruckDriver {
 							+ theTruck.getProbablyFirst());
 					System.out.println("ConvoyID:      "
 							+ theTruck.getConvoyID());
+					System.out.println("CACHING====================");
+					System.out.println("Cache Updates:"
+							+ theTruck.getCacheUpdates() + "||Initializations:"
+							+ theTruck.getInitializations());
+					System.out.print("Pos Cache for Messaging");
+					double[] posCache = theTruck.getTruckPosCache();
+					for(int i = 0; i < posCache.length; i++) {
+						System.out.print(":" + df.format(posCache[i]));
+					}
+					System.out.println();
 					System.out.println("MESSAGES===================");
 					System.out.println("Forwarded:"
 							+ theTruck.getMessagesForwarded() + "||Dropped:"
@@ -443,8 +450,10 @@ public class TruckDriver {
 							+ theTruck.getMessagesFailed() + "||Bad:"
 							+ theTruck.getMalformedMessagesReceived());
 
-					// System.out.print("Last Message sent: "
-					// + theTruck.getLastCreatedMessage());
+					System.out.print("Last Message sent:"
+							+ theTruck.getLastCreatedMessage());
+					System.out.println("Last Message Recd:"
+							+ theTruck.getLastMessageReceived());
 					System.out.println("TIMING=====================");
 					System.out.println("AI Tick:"
 							+ theTruck.getLastAIProcessTime()
@@ -452,31 +461,31 @@ public class TruckDriver {
 							+ theTruck.getLastMessageInterval()
 							+ "||Whole Tick:" + lastTickTime
 							+ "||Whole Tick Interval:" + lastTickInterval);
-					//System.out.println("ROAD VIEW==================");
+					// System.out.println("ROAD VIEW==================");
 					//
-					//// Print RoadView
-					//System.out
-					//		.println("_______________________________________________________");
-					//for (Truck truck : truckList) {
-					//	System.out.print("-[" + truck.getTruckNumber() + ":"
-					//			+ df.format(truck.getPos()) + "]-");
-					//}
-					//System.out.println();
-					//System.out
-					//		.println("_______________________________________________________");
+					// // Print RoadView
+					// System.out
+					// .println("_______________________________________________________");
+					// for (Truck truck : truckList) {
+					// System.out.print("-[" + truck.getTruckNumber() + ":"
+					// + df.format(truck.getPos()) + "]-");
+					// }
+					// System.out.println();
+					// System.out
+					// .println("_______________________________________________________");
 					//
 					// Display truck info (position, speed, acceleration, lane,
 					// total messages)
-					//System.out
-					//		.println("TRUCK     POS            SPEED      ACC      LANE");
-					//for (Truck truck : truckList) {
-					//	System.out.println("  " + truck.getTruckNumber()
-					//			+ "       " + df.format(truck.getPos())
-					//			+ "        " + df.format(truck.getSpeed())
-					//			+ "       "
-					//			+ df.format(truck.getAcceleration())
-					//			+ "        " + truck.getLane());
-					//}
+					// System.out
+					// .println("TRUCK     POS            SPEED      ACC      LANE");
+					// for (Truck truck : truckList) {
+					// System.out.println("  " + truck.getTruckNumber()
+					// + "       " + df.format(truck.getPos())
+					// + "        " + df.format(truck.getSpeed())
+					// + "       "
+					// + df.format(truck.getAcceleration())
+					// + "        " + truck.getLane());
+					// }
 				} else {
 					try {
 						Thread.sleep((long) ((1.0 / (double) UI_TICK_RATE) / 2.0));

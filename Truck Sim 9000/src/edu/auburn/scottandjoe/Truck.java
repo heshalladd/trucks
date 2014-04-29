@@ -62,6 +62,7 @@ public class Truck {
 	private long lastMessageInterval = 0l;
 	private String lastCreatedMessage = "";
 	private String lastForwardedMessage = "";
+	private String lastMessageReceived = "";
 	private HashMap<MessageKeys, String> lastMessageMap = null;
 	private DatagramSocket truckUDPSocket;
 	private FloodingAlgorithm theFA = null;
@@ -77,6 +78,8 @@ public class Truck {
 	private boolean intentChangeLane = false;
 
 	// caching
+	private int cacheUpdates = 0;
+	private int initializations = 0;
 	private Truck[] truckCache;
 	private int[] truckSequenceCache;
 	private String[] truckAddresses;
@@ -212,6 +215,10 @@ public class Truck {
 	public double getAcceleration() {
 		return acceleration;
 	}
+	
+	public int getCacheUpdates() {
+		return cacheUpdates;
+	}
 
 	public String getConvoyID() {
 		return convoyID;
@@ -237,6 +244,10 @@ public class Truck {
 
 	public int getDesiredTruckSimPop() {
 		return desiredTruckSimPop;
+	}
+	
+	public int getInitializations() {
+		return initializations;
 	}
 
 	public int getLane() {
@@ -266,6 +277,10 @@ public class Truck {
 	public long getLastMessageMapTime() {
 		return lastMessageMapTime;
 	}
+	
+	public String getLastMessageReceived() {
+		return lastMessageReceived;
+	}
 
 	public int getMalformedMessagesReceived() {
 		return malformedMessagesReceived;
@@ -292,19 +307,16 @@ public class Truck {
 	}
 
 	public double getNextTruckPos() {
-		Truck nextTruck = null;
-		Truck[] truckCacheLocal = truckCache.clone();
 		double nextTruckPos = 999999.0;
-		for (int i = 0; i < truckCacheLocal.length; i++) {
+		for (int i = 0; i < truckCache.length; i++) {
 			if (truckInitialized[i] && truckNumber - 1 != i
-					&& truckCacheLocal[i].getPos() < nextTruckPos
-					&& truckCacheLocal[i].getPos() > pos) {
-				nextTruck = truckCacheLocal[i];
-				nextTruckPos = truckCacheLocal[i].getPos();
+					&& truckCache[i].getPos() < nextTruckPos
+					&& truckCache[i].getPos() > pos) {
+				nextTruckPos = truckCache[i].getPos();
 				break;
 			}
 		}
-		if (nextTruck == null) {
+		if (nextTruckPos == 999999.0) {
 			return 0;
 		} else {
 			return nextTruckPos;
@@ -495,6 +507,10 @@ public class Truck {
 	public void setLastMessageInterval(long timeDiff) {
 		this.lastMessageInterval = timeDiff;
 	}
+	
+	public void setLastMessageReceived(String message) {
+		this.lastMessageReceived = message;
+	}
 
 	public void setOrderInConvoy(int orderInConvoy) {
 		this.orderInConvoy = orderInConvoy;
@@ -553,10 +569,12 @@ public class Truck {
 	public void updateCache(HashMap<MessageKeys, String> messageMap,
 			int messageTruckNumber) throws NumberFormatException,
 			FatalTruckException {
+		cacheUpdates++;
 		lastMessageMap = messageMap;
 		lastMessageMapTime = System.currentTimeMillis();
 		int truckIndex = messageTruckNumber - 1;
 		if (!truckInitialized[truckIndex]) {
+			initializations++;
 			// get initialization values
 			int lane = Integer.decode(messageMap.get(MessageKeys.LANE));
 			double position = Double.parseDouble(messageMap

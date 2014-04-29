@@ -20,6 +20,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 	public void handleMessage(String message, Truck theTruck) {
 		// truncate on character that signifies end of message
 		String messageTruncated = message.split(TERMINATING_STRING)[0];
+		theTruck.setLastMessageReceived(messageTruncated);
 		String[] messageSplit = messageTruncated.split(",");
 
 		// DEBUG: check length of message in terms of elements (should be
@@ -33,7 +34,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 		int messageSequenceNumber = Integer.decode(messageSplit[0]);
 		if (isMessageNew(messageTruckNumber, messageSequenceNumber, theTruck)) {
 			String forwardedMessage = "";
-			//prepare Hashmap of message values
+			// prepare Hashmap of message values
 			HashMap<Truck.MessageKeys, String> messageMap = new HashMap<Truck.MessageKeys, String>();
 			messageMap.put(Truck.MessageKeys.SEQUENCE_NUMBER, messageSplit[0]);
 			messageMap.put(Truck.MessageKeys.ACCELERATION, messageSplit[4]);
@@ -77,9 +78,10 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 			// through
 			for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
 				// roll the dice
-				if (i != messageTruckNumber && i != previousHop && i != theTruck.getTruckNumber()
+				if (i != messageTruckNumber && i != previousHop
+						&& i != theTruck.getTruckNumber()
 						&& theTruck.isMessageSuccessful(i + 1)) {
-					theTruck.sendMessage((i+1), forwardedMessage);
+					theTruck.sendMessage((i + 1), forwardedMessage);
 					theTruck.increaseMessagesForwarded();
 				}
 			}
@@ -123,13 +125,13 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 			String newMessage = createMessage(theTruck);
 			// update last message time
 			long theTime = System.nanoTime();
-			theTruck.setLastMessageInterval((theTime - lastMessageTime)/1000000);
+			theTruck.setLastMessageInterval((theTime - lastMessageTime) / 1000000);
 			lastMessageTime = theTime;
 			theTruck.increaseMessagesCreated();
 
 			for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
 				// roll the dice
-				if (i != theTruck.getTruckNumber()
+				if ((i + 1) != theTruck.getTruckNumber()
 						&& theTruck.isMessageSuccessful(i + 1)) {
 					theTruck.sendMessage((i + 1), newMessage);
 					theTruck.increaseMessagesSent();
