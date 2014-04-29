@@ -55,6 +55,7 @@ public class Truck {
 	private int messagesDropped = 0;
 	private int messagesCreated = 0;
 	private int messagesSent = 0;
+	private int messagesFailed = 0;
 	private int malformedMessagesReceived = 0;
 	private long lastMessageMapTime = 0l;
 	private String lastCreatedMessage = "";
@@ -69,7 +70,6 @@ public class Truck {
 	private double speed = 0;
 	private int truckNumber;
 	private int lane;
-	private boolean collision = false;
 
 	// intents
 	private boolean intentChangeLane = false;
@@ -80,7 +80,11 @@ public class Truck {
 	private String[] truckAddresses;
 	private long[] lastUpdateTime;
 	// will initialize to false (desired)
-	public static boolean[] truckInitialized;
+	private boolean[] truckInitialized;
+
+	// used for piecewise equation that determines chance to send based on wifi
+	// range constaints
+	private double[] truckPosCache;
 
 	// enum for hashmaps
 	public enum MessageKeys {
@@ -95,6 +99,7 @@ public class Truck {
 		this.theFA = FA;
 		this.desiredTruckSimPop = desiredTruckSimPop;
 		truckCache = new Truck[desiredTruckSimPop];
+		truckPosCache = new double[desiredTruckSimPop];
 		truckSequenceCache = new int[desiredTruckSimPop];
 		truckAddresses = new String[desiredTruckSimPop];
 		truckInitialized = new boolean[desiredTruckSimPop];
@@ -196,61 +201,6 @@ public class Truck {
 		}
 	}
 
-	public void checkForCollision() throws FatalTruckException {
-		// check for collision
-		for (int i = 0; i < truckCache.length - 1; i++) {
-			if (truckInitialized[i] && (truckNumber - 1) != i) {
-				// check if truck is behind us
-				if (pos > truckCache[i].getPos()) {
-					// check if truck is crashing into us
-					if (pos - TRUCK_LENGTH > truckCache[i].getPos()) {
-						// we're good
-					} else {
-						System.out.println("[COLLISION] Truck " + (i + 1)
-								+ " ran into  Truck " + (truckNumber) + "!");
-						collision = true;
-						explode("COLLISION! BOOOM!");
-					}
-				} else {
-					if (pos < truckCache[i].getPos() - TRUCK_LENGTH) {
-						// we're good
-					} else {
-						System.out.println("[COLLISION] Truck " + truckNumber
-								+ " ran into  Truck " + (i + 1) + "!");
-						collision = true;
-						explode("COLLISION! BOOOM!");
-					}
-				}
-			}
-		}
-	}
-
-	// determines whether message will make it through using a mathematical
-	// model
-	public boolean isMessageSuccessful(Truck destinationTruck) {
-		double chanceToSend = 0.0;
-		double distanceApart = Math.abs(pos - destinationTruck.getPos());
-		// piecewise equation for determining
-		// transmission
-		// probability
-		if (distanceApart < 70) {
-			chanceToSend = -0.002142857 * distanceApart + 1;
-		} else if (distanceApart >= 70 && distanceApart < 100) {
-			chanceToSend = -(0.00094 * Math.pow(distanceApart - 70, 2)) + 0.85;
-		} else if (distanceApart >= 100) {
-			chanceToSend = 0.0;
-		}
-
-		// roll the dice
-		Random rand = new Random();
-		if (chanceToSend >= rand.nextDouble()) {
-			return true;
-		} else {
-			return false;
-		}
-
-	}
-
 	public void explode(String reason) throws FatalTruckException {
 		throw new FatalTruckException(reason);
 	}
@@ -317,6 +267,10 @@ public class Truck {
 		return messagesDropped;
 	}
 
+	public int getMessagesFailed() {
+		return messagesFailed;
+	}
+
 	public int getMessagesForwarded() {
 		return messagesForwarded;
 	}
@@ -381,6 +335,10 @@ public class Truck {
 		return truckCache;
 	}
 
+	public double[] getTruckPosCache() {
+		return truckPosCache;
+	}
+
 	public boolean[] getTruckInitialized() {
 		return truckInitialized;
 	}
@@ -416,15 +374,47 @@ public class Truck {
 		messagesDropped++;
 	}
 
-	public void increaseMessagesSent() {
-		messagesSent++;
+	public void increaseMessagesFailed() {
+		messagesFailed++;
 	}
 
 	public void increaseMessagesForwarded() {
 		messagesForwarded++;
 	}
 
-	public void sendMessage(Truck targetTruck, String message) {
+	public void increaseMessagesSent() {
+		messagesSent++;
+	}
+
+	// determines whether message will make it through using a mathematical
+	// model
+	public boolean isMessageSuccessful(int destinationTruckNumber) {
+		double chanceToSend = 0.0;
+		double distanceApart = Math.abs(pos
+				- truckPosCache[destinationTruckNumber - 1]);
+		// piecewise equation for determining
+		// transmission
+		// probability
+		if (distanceApart < 70) {
+			chanceToSend = -0.002142857 * distanceApart + 1;
+		} else if (distanceApart >= 70 && distanceApart < 100) {
+			chanceToSend = -(0.00094 * Math.pow(distanceApart - 70, 2)) + 0.85;
+		} else if (distanceApart >= 100) {
+			return false;
+		}
+
+		// roll the dice
+		Random rand = new Random();
+		if (chanceToSend >= rand.nextDouble()) {
+			return true;
+		} else {
+			increaseMessagesFailed();
+			return false;
+		}
+
+	}
+
+	public void sendMessage(int targetTruckNumber, String message) {
 		// get address and port for sending stuff via
 		// UDP.
 		byte[] outBoundPacketBuf = new byte[4096];
@@ -433,7 +423,7 @@ public class Truck {
 		try {
 			forwardUDPSock = new DatagramSocket();
 			InetAddress truckDestination = InetAddress
-					.getByName(truckAddresses[targetTruck.getTruckNumber() - 1]);
+					.getByName(truckAddresses[targetTruckNumber - 1]);
 			DatagramPacket outBoundUDPPacket = new DatagramPacket(
 					outBoundPacketBuf, outBoundPacketBuf.length,
 					truckDestination, PORT);
@@ -518,15 +508,19 @@ public class Truck {
 		this.truckNumber = truckNumber;
 	}
 
+	public void setTruckPosCache(double[] cache) {
+		this.truckPosCache = cache;
+	}
+
 	public void startUDPListener() {
 		// start listener
 		try {
 			this.truckUDPSocket = new DatagramSocket(PORT);
+			new UDPMessageListener().start();
 		} catch (SocketException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		new UDPMessageListener().start();
 	}
 
 	public void stopUDPListener() {
@@ -626,9 +620,6 @@ public class Truck {
 		if (desiredLane != lane && intentChangeLane && !changingLanes) {
 			new LaneChanger(desiredLane).start();
 			changingLanes = true;
-		}
-		if (!collision) {
-			checkForCollision();
 		}
 
 		return 1;

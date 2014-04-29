@@ -1,6 +1,5 @@
 package edu.auburn.scottandjoe;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 public class BasicFloodingAlgorithm implements FloodingAlgorithm {
@@ -74,28 +73,17 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 			}
 			forwardedMessage += TERMINATING_STRING;
 
-			ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
-			// determine what trucks are valid and in range
-			for (int i = 0; i < theTruck.getTruckCache().length; i++) {
-				if (i != previousHop - 1 && i != theTruck.getTruckNumber() - 1
-						&& i != messageTruckNumber
-						&& theTruck.getTruckInitialized()[i]) {
-					trucksInRange.add(theTruck.getTruckCache()[i]);
+			// determine whether those messages are going to make it
+			// through
+			for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
+				// roll the dice
+				if (i != messageTruckNumber && i != previousHop && i != theTruck.getTruckNumber()
+						&& theTruck.isMessageSuccessful(i + 1)) {
+					theTruck.sendMessage((i+1), forwardedMessage);
+					theTruck.increaseMessagesForwarded();
 				}
 			}
 
-			// determine whether those messages are going to make it
-			// through
-			if (trucksInRange.size() > 0) {
-				for (int i = 0; i < trucksInRange.size(); i++) {
-					// roll the dice
-					Truck targetTruck = trucksInRange.get(i);
-					if (theTruck.isMessageSuccessful(targetTruck)) {
-						theTruck.sendMessage(targetTruck, forwardedMessage);
-						theTruck.increaseMessagesForwarded();
-					}
-				}
-			}
 		} else {
 			theTruck.increaseMessagesDropped();
 		}
@@ -108,8 +96,8 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 				// 0 - sequence number
 				+ theTruck.getSequenceNumber() + ","
 				// 1 - source IP address
-				+ theTruck.getTruckAddresses()[theTruck.getTruckNumber()] + ","
-				+ Controller.TRUCK_PORT + "," // 2 - source port
+				+ theTruck.getTruckAddresses()[theTruck.getTruckNumber() - 1]
+				+ "," + Controller.TRUCK_PORT + "," // 2 - source port
 				+ theTruck.getTruckNumber() + "," // 3 - previous hop
 				+ theTruck.getAcceleration() + "," // 4 - acceleration
 				+ theTruck.getPos() + "," // 5 - position
@@ -137,27 +125,16 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 			lastMessageTime = System.nanoTime();
 			theTruck.increaseMessagesCreated();
 
-			// find trucks in range
-			ArrayList<Truck> trucksInRange = new ArrayList<Truck>();
+			for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
+				// roll the dice
+				if (i != theTruck.getTruckNumber()
+						&& theTruck.isMessageSuccessful(i + 1)) {
+					theTruck.sendMessage((i + 1), newMessage);
+					theTruck.increaseMessagesSent();
+					theTruck.setLastCreatedMessage(newMessage);
+				}
+			}
 
-			// determine what trucks are in range
-			for (int i = 0; i < theTruck.getTruckCache().length; i++) {
-				if (i != theTruck.getTruckNumber() - 1
-						&& theTruck.getTruckInitialized()[i]) {
-					trucksInRange.add(theTruck.getTruckCache()[i]);
-				}
-			}
-			if (trucksInRange.size() > 0) {
-				for (int i = 0; i < trucksInRange.size(); i++) {
-					// roll the dice
-					Truck targetTruck = trucksInRange.get(i);
-					if (theTruck.isMessageSuccessful(targetTruck)) {
-						theTruck.sendMessage(targetTruck, newMessage);
-						theTruck.increaseMessagesSent();
-						theTruck.setLastCreatedMessage(newMessage);
-					}
-				}
-			}
 		}
 	}
 
