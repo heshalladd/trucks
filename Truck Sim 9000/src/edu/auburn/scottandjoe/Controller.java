@@ -375,6 +375,7 @@ public class Controller {
 				}
 				if((System.currentTimeMillis() - simulationStartTime)/1000 >= 300) {
 					System.out.println("[NORMAL] Simulation ended (5 minute timer)");
+					break;
 				}
 			}
 		}
