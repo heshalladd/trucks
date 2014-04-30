@@ -42,6 +42,7 @@ public class Viewer extends JPanel implements Runnable {
 	static int mFrogX = 200;
 	static int mFrogY = 200;
 	int mSelectedTruck = -1;
+	boolean mPlatoonView = true;
 
 	public Viewer() {
 		setSize(1280, 768);
@@ -98,7 +99,7 @@ public class Viewer extends JPanel implements Runnable {
 					truckDataUnit = mTruckDataList.truckDataList.get(truckNumber);
 					if (truckDataUnit.mAlive) {
 						x = truckDataUnit.mLocationX; 
-						truckRectangle = new Rectangle(x%1280,getYFromX(x),75,22);
+						truckRectangle = new Rectangle(x%1280,getYFromX(x*3),75,22);
 						if(truckRectangle.contains(p)){
 							System.out.println("TruckNumber: "+ truckDataUnit.mNumber);
 							mSelectedTruck = truckDataUnit.mNumber;
@@ -214,12 +215,12 @@ public class Viewer extends JPanel implements Runnable {
 		for (int truckNumber = 1; truckNumber <= 10; truckNumber++) {
 			truckDataUnit = mTruckDataList.truckDataList.get(truckNumber);
 			if (truckDataUnit.mAlive) {
-				int x = truckDataUnit.mLocationX;
-				y = getYFromX(x);
+				int x = (truckDataUnit.mLocationX*3)%1280;
+				y = getYFromX(truckDataUnit.mLocationX*3);
 				
-				g2d.drawImage(mTruckImage, x % 1280, y, null);
+				g2d.drawImage(mTruckImage, x, y, null);
 				if(mSelectedTruck == truckDataUnit.mNumber){
-					Rectangle truckRectangle = new Rectangle(x%1280,y,75,22);
+					Rectangle truckRectangle = new Rectangle(x,y,75,22);
 					g2d.setColor(Color.RED);
 					float thickness = 2;
 					Stroke oldStroke = g2d.getStroke();
@@ -228,13 +229,15 @@ public class Viewer extends JPanel implements Runnable {
 					g2d.setStroke(oldStroke);
 
 				}
+				if(mPlatoonView){
+					g2d.setColor(mTruckDataList.platoonIdMap.get(truckDataUnit.mPlatoonId));
+					g2d.fillRect(x, y, 75, 22);
+
+				}
 				
-				
-				//g2d.setColor(Color.black);
-				//g2d.drawString(truckDataUnit.mInformation, 490, 490);
 				if(mFroggerMode){
 					g2d.drawImage(mFrogImage, mFrogX, mFrogY, null);
-					Rectangle truckRectangle = new Rectangle(x%1280,y,75,22);
+					Rectangle truckRectangle = new Rectangle(x,y,75,22);
 					g2d.setColor(new Color(255, 0, 0, 255));
 					g2d.draw(truckRectangle);
 					Rectangle frogRectangle = new Rectangle(this.mFrogX,this.mFrogY,40,56);
