@@ -125,7 +125,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 			String newMessage = createMessage(theTruck);
 			// update last message time
 			long theTime = System.nanoTime();
-			theTruck.setLastMessageInterval((theTime - lastMessageTime) / 1000000);
+			theTruck.setLastMessageInterval((theTime - lastMessageTime));
 			lastMessageTime = theTime;
 			theTruck.increaseMessagesCreated();
 

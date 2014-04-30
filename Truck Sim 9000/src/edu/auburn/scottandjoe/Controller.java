@@ -12,9 +12,11 @@ import java.util.Scanner;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Controller {
-	public static final int TICK_RATE = 200;
+	public static final int TICK_RATE = 120;
+	public static final int VIS_SEND_RATE = 100;
 	public static final int TRUCK_PORT = 10125;
 	public static final int DAEMON_PORT = 10126;
+	public static final int VISUALIZER_PORT = 10127;
 	public static final int MAX_BUFFER_SIZE = 4096;
 	public static final String TERMINATING_STRING = "\n";
 	// constants for daemon message types
@@ -30,7 +32,7 @@ public class Controller {
 
 	private static int totalTrucks = 0;
 	// pseudo constant. will be later controlled by args
-	private static int desiredTruckSimPop = 3;
+	private static int desiredTruckSimPop = 2;
 	private static boolean allTrucksConnected = false;
 	private static boolean collision = false;
 	private static double[] truckPosCache;
@@ -46,6 +48,8 @@ public class Controller {
 		final String ANSI_HOME = "\u001b[H";
 		System.out.print(ANSI_CLS + ANSI_HOME);
 		System.out.println("[NORMAL] Launching the controller.");
+		//TODO: check this input
+		desiredTruckSimPop = Integer.parseInt(args[0]);
 		requests = new LinkedBlockingQueue[desiredTruckSimPop];
 		for (int i = 0; i < desiredTruckSimPop; i++) {
 			requests[i] = new LinkedBlockingQueue<String>();
@@ -154,7 +158,7 @@ public class Controller {
 				try {
 					String message = requests[truckNumber - 1].take();
 					sendMessage(message);
-					//System.out.print("[DEBUG] Message Sent:" + message);
+					// System.out.print("[DEBUG] Message Sent:" + message);
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -250,7 +254,8 @@ public class Controller {
 						// handle incoming data
 						switch (requestType) {
 						case TRUCK_POS:
-							double position = Double.parseDouble(receivedMessage[3]);
+							double position = Double
+									.parseDouble(receivedMessage[3]);
 							if (position > truckPosCache[truckNumber - 1]) {
 								truckPosCache[truckNumber - 1] = position;
 								truckPosCacheTime[truckNumber - 1] = System
@@ -303,16 +308,45 @@ public class Controller {
 				System.out
 						.println("[UIH] All trucks connected. Type \"start\" to begin the simulation.");
 				waitForStartFromUser();
-
+				long lastStartTime = System.currentTimeMillis();
 				while (true) {
 					waitForCollisionFromTruck();
 					Arrays.fill(truckPosCache, 0.0);
-					System.out
-							.println("[UIH] There was a collision. Type \"start\" to start a new simulation.");
-					waitForStartFromUser();
+					if((System.currentTimeMillis() - lastStartTime) < 10000) {
+						System.out
+								.println("[WARNING] There was a collision. Attempting to start new simulation.");
+						waitAndStart();
+					} else {
+						System.out
+								.println("[UIH] There was a collision. Type \"start\" to restart the simulation.");
+						waitForStartFromUser();
+					}
+					
+					lastStartTime = System.currentTimeMillis();
+					
 				}
 
 			}
+		}
+		
+		private void waitAndStart() {
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			for (int i = 0; i < requests.length; i++) {
+				try {
+					requests[i].put("" + (i + 1) + "," + REQUEST + ","
+							+ START_SIM + "," + desiredTruckSimPop
+							+ TERMINATING_STRING);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			System.out.println("[NORMAL] New Sim Started.");
 		}
 
 		private void waitForCollisionFromTruck() {
@@ -322,18 +356,14 @@ public class Controller {
 						System.out
 								.println("[WARNING] Collision between trucks detected. Sending stop command.");
 						for (int i = 0; i < requests.length; i++) {
-							requests[i].put("" + (i+1) + "," 
-									+ REQUEST + "," 
-									+ END_SIM
-									+ TERMINATING_STRING);
+							requests[i].put("" + (i + 1) + "," + REQUEST + ","
+									+ END_SIM + TERMINATING_STRING);
 						}
 						break;
 					} else {
 						for (int i = 0; i < requests.length; i++) {
-							requests[i].put("" + (i+1) 
-									+ "," + REQUEST 
-									+ "," + TRUCK_POS
-									+ TERMINATING_STRING);
+							requests[i].put("" + (i + 1) + "," + REQUEST + ","
+									+ TRUCK_POS + TERMINATING_STRING);
 						}
 					}
 
@@ -350,10 +380,8 @@ public class Controller {
 					userInput = scanner.nextLine();
 					if (userInput.equals("start")) {
 						for (int i = 0; i < requests.length; i++) {
-							requests[i].put("" + (i+1) + "," 
-									+ REQUEST + "," 
-									+ START_SIM + "," 
-									+ desiredTruckSimPop
+							requests[i].put("" + (i + 1) + "," + REQUEST + ","
+									+ START_SIM + "," + desiredTruckSimPop
 									+ TERMINATING_STRING);
 							System.out
 									.println("[NORMAL] Sending start request to TruckDriver for Truck "
@@ -398,8 +426,8 @@ public class Controller {
 							receivedData, receivedData.length);
 					daemonSocket.receive(receivedPacket);
 					receivedMessageWhole = new String(receivedPacket.getData());
-					//System.out.print("[DEBUG] Message Received:"
-					//		+ receivedMessageWhole);
+					// System.out.print("[DEBUG] Message Received:"
+					// + receivedMessageWhole);
 					int truckNumber = Integer.parseInt(receivedMessageWhole
 							.split(TERMINATING_STRING)[0].split(",")[0]);
 					if (truckNumber == 101) {

@@ -20,6 +20,7 @@ public class TruckDriver {
 
 	// local variables
 	private static boolean running = false;
+	private static String visualizerAddress = "";
 	private static Truck theTruck;
 	private static int desiredTruckSimPop = 0;
 	private static long lastTickTime = 0l;
@@ -27,12 +28,12 @@ public class TruckDriver {
 
 	// variables for reinitializing
 	private static int initTruckNumber;
+	private static int floodingAlgorithmType = 0;
 	private static int initLane;
 	private static double initPos;
 	private static double initSpeed;
 	private static double initAcceleration;
 	private static boolean initialized = false;
-	private static FloodingAlgorithm floodingAlgorithm = null;
 	private static LinkedBlockingQueue<String> requests = new LinkedBlockingQueue<String>();
 
 	/**
@@ -41,7 +42,7 @@ public class TruckDriver {
 	 */
 
 	// args[0] - "the controller" ip
-	// args[1] - "the controller" port - unused
+	// args[1] - "the viewer" ip
 	// args[2] - truck number (1 - X)
 	// args[3] - start pos
 	// args[4] - 1 for basic FA, 2 for MPR FA
@@ -50,19 +51,20 @@ public class TruckDriver {
 		final String ANSI_HOME = "\u001b[H";
 		System.out.print(ANSI_CLS + ANSI_HOME);
 		String controllerAddress = args[0];
+		visualizerAddress = args[1];
 		System.out.println("[NORMAL] Controller address set to "
 				+ controllerAddress);
 		initTruckNumber = Integer.decode(args[2]);
 		System.out.println("[NORMAL] Truck Number set to " + initTruckNumber);
 		initLane = Truck.RANDOMIZE_INT;
-		initPos = Double.parseDouble(args[3]);
-		System.out.println("[NORMAL] Starting position set to " + initPos);
-		if (Integer.parseInt(args[4]) == 1) {
-			floodingAlgorithm = new BasicFloodingAlgorithm();
-			System.out.println("[NORMAL] Basic Flooding Algorithm selected.");
-		} else if (Integer.parseInt(args[4]) == 2) {
-			// TODO: set to the MPR FA
+		//TEST
+		if(Integer.parseInt(args[3]) == -1) {
+			initPos = Truck.RANDOMIZE_DOUBLE;
+		} else {
+			initPos = Double.parseDouble(args[3]);
 		}
+		System.out.println("[NORMAL] Starting position set to " + initPos);
+		floodingAlgorithmType = Integer.parseInt(args[4]);
 		// double pos = Truck.RANDOMIZE_DOUBLE;
 		initSpeed = Truck.RANDOMIZE_DOUBLE;
 		initAcceleration = Truck.RANDOMIZE_DOUBLE;
@@ -155,6 +157,12 @@ public class TruckDriver {
 							// initialize truck
 							System.out.println("[NORMAL] Creating new truck.");
 							theTruck = null;
+							FloodingAlgorithm floodingAlgorithm = null;
+							if (floodingAlgorithmType == 1) {
+								floodingAlgorithm = new BasicFloodingAlgorithm();
+							} else if (floodingAlgorithmType == 2) {
+								// TODO: set to the MPR FA
+							}
 							theTruck = new Truck(initTruckNumber, initLane,
 									initPos, initSpeed, initAcceleration,
 									floodingAlgorithm, desiredTruckSimPop);
@@ -311,6 +319,15 @@ public class TruckDriver {
 		public void run() {
 			long tickStart = 0l;
 			long tickEnd = 0l;
+			HashMap<Integer, String> AIMap = new HashMap<Integer, String>();
+			AIMap.put(0, "NEW_TRUCK");
+			AIMap.put(1, "STABILIZING");
+			AIMap.put(2, "STABILIZED");
+			AIMap.put(3, "SOLO_CONVOY");
+			AIMap.put(4, "MULTI_CONVOY");
+			AIMap.put(5, "FULL_CONVOY");
+			AIMap.put(6, "COLLIDED");
+			AIMap.put(7, "MERGING_CONVOY");
 			// TODO: add some tools to save and output average or current tick
 			// computation time
 			// in order to better fine tune the tick rate as low as possible
@@ -325,9 +342,30 @@ public class TruckDriver {
 					}
 
 					// while loop to do tick limited truck updates
+					long lastVisMessageTime = 0l;
+					
 					while (running && initialized) {
 						long theTime = System.nanoTime();
-						lastTickInterval = (theTime - tickStart) / 1000000;
+						if(((System.nanoTime() - lastVisMessageTime) / 1000000000.0) > (1.0 / (double) Controller.VIS_SEND_RATE)) {
+							DecimalFormat df = new DecimalFormat("#0.00");
+							String visMessage = "" + theTruck.getTruckNumber() + ","
+									+ (int)theTruck.getPos() + ","
+									+ theTruck.getConvoyID() + ","
+									+ "Truck Number: " + theTruck.getTruckNumber()
+									+ "\n" + theTruck.getConvoyID()
+									+ "\nOrder: " + theTruck.getOrderInConvoy()
+									+ "\nSize: " + theTruck.getConvoySize()
+									+ "\nPosition: " + (int)theTruck.getPos()
+									+ "\nNext Truck Gap: " + (int)(theTruck.getNextTruckPos() -  theTruck.getPos() - Truck.TRUCK_LENGTH)
+									+ "\nSpeed: " + df.format((theTruck.getSpeed()*2.23694)) + "mph"
+									+ "\nAcceleration: " + df.format(theTruck.getAcceleration())
+									+ "\nAIState: " + AIMap.get(theTruck.getTruckAIState())
+									+ TERMINATING_STRING;
+							sendVisMessage(visMessage);
+							lastVisMessageTime = System.nanoTime();
+							//System.out.print("[DEBUG] VIS ADDR:" + visualizerAddress + "||VIS PORT:" + Controller.VISUALIZER_PORT + "||VIS MSG:" + visMessage);
+						}
+						lastTickInterval = (theTime - tickStart);
 						tickStart = theTime;
 						theTruck.updateMental();
 						theTruck.updatePhysical();
@@ -335,7 +373,7 @@ public class TruckDriver {
 								+ Controller.REQUEST + ","
 								+ Controller.POS_CACHE + TERMINATING_STRING);
 						tickEnd = System.nanoTime();
-						lastTickTime = (tickEnd - tickStart) / 1000000;
+						lastTickTime = (tickEnd - tickStart);
 						while (((System.nanoTime() - tickStart) / 1000000000.0) < (1.0 / (double) TICK_RATE)) {
 						}
 					}
@@ -354,6 +392,27 @@ public class TruckDriver {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+			}
+		}
+		private void sendVisMessage(String message) {
+			byte[] outBoundPacketBuf = new byte[4096];
+			outBoundPacketBuf = message.getBytes();
+			DatagramSocket visualizerUDPSock;
+			try {
+				visualizerUDPSock = new DatagramSocket();
+				InetAddress visDestination = InetAddress
+						.getByName(visualizerAddress);
+				DatagramPacket outBoundUDPPacket = new DatagramPacket(
+						outBoundPacketBuf, outBoundPacketBuf.length,
+						visDestination, Controller.VISUALIZER_PORT);
+				visualizerUDPSock.send(outBoundUDPPacket);
+				visualizerUDPSock.close();
+			} catch (SocketException e) {
+				e.printStackTrace();
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
 			}
 		}
 	}
@@ -376,6 +435,7 @@ public class TruckDriver {
 			AIMap.put(6, "COLLIDED");
 			AIMap.put(7, "MERGING_CONVOY");
 			DecimalFormat df = new DecimalFormat("#0.00");
+			DecimalFormat df2 = new DecimalFormat("#0.000000");
 			while (true) {
 				UITickStart = System.nanoTime();
 				if (running && initialized) {
@@ -437,8 +497,8 @@ public class TruckDriver {
 							+ theTruck.getInitializations());
 					System.out.print("Pos Cache for Messaging");
 					double[] posCache = theTruck.getTruckPosCache();
-					for(int i = 0; i < posCache.length; i++) {
-						System.out.print(":" + df.format(posCache[i]));
+					for (int i = 0; i < posCache.length; i++) {
+						System.out.print("||" + (int)posCache[i]);
 					}
 					System.out.println();
 					System.out.println("MESSAGES===================");
@@ -456,11 +516,12 @@ public class TruckDriver {
 							+ theTruck.getLastMessageReceived());
 					System.out.println("TIMING=====================");
 					System.out.println("AI Tick:"
-							+ theTruck.getLastAIProcessTime()
+							+ df2.format(theTruck.getLastAIProcessTime())
 							+ "||New Msg Interval:"
-							+ theTruck.getLastMessageInterval()
-							+ "||Whole Tick:" + lastTickTime
-							+ "||Whole Tick Interval:" + lastTickInterval);
+							+ df2.format(theTruck.getLastMessageInterval()));
+					System.out.println("Whole Tick:" + df2.format(lastTickTime)
+							+ "||Whole Tick Interval:"
+							+ df2.format(lastTickInterval));
 					// System.out.println("ROAD VIEW==================");
 					//
 					// // Print RoadView

@@ -24,6 +24,7 @@ public class Truck {
 	public static final int MAX_LANE = 1;
 	public static final int MIN_LANE = 1;
 	public static final double TRUCK_LENGTH = 25.0;
+	public static final double MAX_INITIAL_POS = 1000;
 
 	// 80mph is 35.7m/s
 	public static final double MAX_REASONABLE_SPEED = 35.7;
@@ -137,8 +138,7 @@ public class Truck {
 			System.out.println("[NORMAL] Truck position initialized to "
 					+ this.pos + ".");
 		} else {
-			double MAX_INITIAL_POS = 350;
-			// randomize position between 0 and 350
+			// randomize position between 0 and MAX_INITIAL_POS
 			this.pos = MAX_INITIAL_POS * rand.nextDouble();
 			System.out
 					.println("[NORMAL] Truck position randomly initialized to "
@@ -414,8 +414,11 @@ public class Truck {
 	// model
 	public boolean isMessageSuccessful(int destinationTruckNumber) {
 		double chanceToSend = 0.0;
-		double distanceApart = Math.abs(pos
-				- truckPosCache[destinationTruckNumber - 1]);
+		double distanceApart = 1000.0;
+		if(truckPosCache[destinationTruckNumber - 1] != 0) {
+			distanceApart = Math.abs(pos
+					- truckPosCache[destinationTruckNumber - 1]);
+		}
 		// piecewise equation for determining
 		// transmission
 		// probability
@@ -647,7 +650,7 @@ public class Truck {
 		long startTime = System.nanoTime();
 		theAI.doAI(this);
 		long endTime = System.nanoTime();
-		lastAIProcessTime = (endTime - startTime)/1000000;
+		lastAIProcessTime = (endTime - startTime);
 
 	}
 
@@ -708,6 +711,7 @@ public class Truck {
 					truckUDPSocket.receive(receivedPacket);
 					// System.out.println("[NORMAL] Received packet:"
 					// + new String(receivedPacket.getData()));
+					//TODO: add a short parse to split end to end packets off to AI
 					incomingUDPMessages
 							.add(new String(receivedPacket.getData()));
 				}

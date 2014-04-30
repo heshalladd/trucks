@@ -19,10 +19,10 @@ public class TruckAI {
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
-	private static final double CATCHING_SPEED = 34.2;
-	private static final double SOLO_CATCHING_SPEED = 34.2;
-	private static final double MERGING_CATCHING_SPEED = 34.2;
-	private static final double MULTI_CATCHING_SPEED = 34.2;
+	private static final double CATCHING_SPEED = 33.2;
+	private static final double SOLO_CATCHING_SPEED = 33.2;
+	private static final double MERGING_CATCHING_SPEED = 33.2;
+	private static final double MULTI_CATCHING_SPEED = 33.2;
 	private static final double MIN_CONVOY_GAP = 10.0;
 	private static final double MAX_CONVOY_GAP = 20.0;
 	private static final double GAS_PEDAL_ACCEL_VALUE = (0.1 / (double) TICK_RATE);
@@ -92,20 +92,19 @@ public class TruckAI {
 			desiredSpeed = theTruck.getSpeed();
 			// predict approximate position relative to other trucks based on
 			// start pos
-			if (startPos <= 270) {
-				theTruck.setProbablyFirst(false);
-			}
-			if (startPos > 270) {
+			if (startPos == Truck.MAX_INITIAL_POS) {
 				theTruck.setProbablyFirst(true);
+			} else {
+				theTruck.setProbablyFirst(false);
 			}
 
 			// set desired speed to stabilizing speed
 			desiredSpeed = STABILIZING_SPEED;
 			// start stabilizing countdown timer using tick rate for reference
-			stabilizingCountdown = (int) (TICK_RATE * Math.ceil(Math.max(
+			stabilizingCountdown = (int) (TICK_RATE * (Math.ceil(Math.max(
 					MAX_REASONABLE_SPEED - STABILIZING_SPEED, STABILIZING_SPEED
 							- MIN_REASONABLE_SPEED)
-					/ Math.min(MAX_ACCELERATION, MIN_ACCELERATION)));
+					/ Math.min(MAX_ACCELERATION, MIN_ACCELERATION))));
 
 			// !debug set stabilizing countdown to what it should be
 			stabilizingCountdown = 67;
@@ -131,7 +130,8 @@ public class TruckAI {
 			break;
 
 		case SOLO_CONVOY:
-			// if there is a truck in this convoy with position equal to population size, become full
+			// if there is a truck in this convoy with position equal to
+			// population size, become full
 			// convoy
 			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 				truckAIState = FULL_CONVOY;
@@ -164,11 +164,31 @@ public class TruckAI {
 			break;
 
 		case MULTI_CONVOY:
-			// if there is a truck in this convoy with position equal to the population, become full
+			// if there is a truck in this convoy with position equal to the
+			// population, become full
 			// convoy
 			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 				truckAIState = FULL_CONVOY;
 			}
+
+			// make sure that you get the platoon stuff right
+			Truck[] truckCacheFreeze1 = truckCache.clone();
+			Truck nextTruck1 = null;
+			double nextTruckPos1 = 999999.0;
+			for (int i = 0; i < truckCacheFreeze1.length; i++) {
+				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
+						&& truckCacheFreeze1[i].getPos() < nextTruckPos1
+						&& truckCacheFreeze1[i].getPos() > theTruck.getPos()) {
+					nextTruck1 = truckCacheFreeze1[i];
+					nextTruckPos1 = nextTruck1.getPos();
+					break;
+				}
+			}
+			if (nextTruck1 != null) {
+				theTruck.setConvoyID(nextTruck1.getConvoyID());
+				theTruck.setOrderInConvoy(nextTruck1.getOrderInConvoy() + 1);
+			}
+
 			// if the leader of the convoy isn't the first truck,
 			// accelerate while maintaining distance
 			for (int i = 0; i < truckCache.length; i++) {
@@ -208,10 +228,29 @@ public class TruckAI {
 			break;
 
 		case MERGING_CONVOY:
-			// if there is a truck in this convoy with position equal to the population, become full
+			// if there is a truck in this convoy with position equal to the
+			// population, become full
 			// convoy
 			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 				truckAIState = FULL_CONVOY;
+			}
+
+			// make sure that you get the platoon stuff right
+			Truck[] truckCacheFreeze2 = truckCache.clone();
+			Truck nextTruck2 = null;
+			double nextTruckPos2 = 999999.0;
+			for (int i = 0; i < truckCacheFreeze2.length; i++) {
+				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
+						&& truckCacheFreeze2[i].getPos() < nextTruckPos2
+						&& truckCacheFreeze2[i].getPos() > theTruck.getPos()) {
+					nextTruck2 = truckCacheFreeze2[i];
+					nextTruckPos2 = nextTruck2.getPos();
+					break;
+				}
+			}
+			if (nextTruck2 != null) {
+				theTruck.setConvoyID(nextTruck2.getConvoyID());
+				theTruck.setOrderInConvoy(nextTruck2.getOrderInConvoy() + 1);
 			}
 
 			// try to close the gap to an acceptable range with the truck
