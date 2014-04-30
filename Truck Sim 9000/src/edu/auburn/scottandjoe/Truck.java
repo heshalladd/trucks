@@ -715,8 +715,9 @@ public class Truck {
 					// System.out.println("[NORMAL] Received packet:"
 					// + new String(receivedPacket.getData()));
 					//TODO: add a short parse to split end to end packets off to AI
+					String receivedMessage = new String(receivedPacket.getData());
 					incomingUDPMessages
-							.add(new String(receivedPacket.getData()));
+							.add(receivedMessage);
 				}
 			} catch (IOException e) {
 				System.out

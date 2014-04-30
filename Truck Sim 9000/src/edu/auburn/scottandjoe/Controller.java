@@ -35,6 +35,7 @@ public class Controller {
 	private static int desiredTruckSimPop = 2;
 	private static boolean allTrucksConnected = false;
 	private static boolean collision = false;
+	private static long simulationStartTime = 0l;
 	private static double[] truckPosCache;
 	private static long[] truckPosCacheTime;
 	private static String[] truckAddresses;
@@ -350,6 +351,7 @@ public class Controller {
 		}
 
 		private void waitForCollisionFromTruck() {
+			simulationStartTime = System.currentTimeMillis();
 			while (!collision) {
 				try {
 					if (checkForCollision()) {
@@ -370,6 +372,9 @@ public class Controller {
 					Thread.sleep(20);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
+				}
+				if((System.currentTimeMillis() - simulationStartTime)/1000 >= 300) {
+					System.out.println("[NORMAL] Simulation ended (5 minute timer)");
 				}
 			}
 		}

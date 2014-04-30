@@ -189,6 +189,11 @@ public class TruckAI {
 					break;
 				}
 			}
+			//TODO: can't find why truck 2 isn't getting updates from truck 1
+			//here is a quick fix
+			if(fullConvoy) {
+				truckAIState = FIRST_CONVOY_MEMBER;
+			}
 			break;
 
 		default:
