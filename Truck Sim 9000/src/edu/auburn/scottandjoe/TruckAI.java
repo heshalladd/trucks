@@ -13,8 +13,7 @@ public class TruckAI {
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
-	private static final double MAINTAIN_CATCH_SPEED = 32.3;
-	private static final double CATCHING_SPEED = 34.2;
+	private static final double CATCHING_SPEED = 33.2;
 	private static final double MIN_CONVOY_GAP = 10.0;
 	private static final double MAX_CONVOY_GAP = 20.0;
 	private static final double GAS_PEDAL_ACCEL_VALUE = (0.1 / (double) TICK_RATE);
@@ -30,14 +29,12 @@ public class TruckAI {
 	// 4 - is in convoy that has person who is 1st (maintain gap)
 	// 5 - is in convoy that doesn't have a leader who is 1st (catch others and
 	// avoid collisions)
-	// 6 - convoy is full. if truck is leader, send end to end packet 1/s
 	public static final int NEW_TRUCK = 0;
 	public static final int STABILIZING = 1;
 	public static final int STABILIZED = 2;
 	public static final int FIRST_CONVOY_LEADER = 3;
 	public static final int FIRST_CONVOY_MEMBER = 4;
 	public static final int NON_FIRST_CONVOY_MEMBER = 5;
-	public static final int FULL_CONVOY = 6;
 
 	// ai variables
 	private int stabilizingCountdown = 0;
@@ -147,12 +144,13 @@ public class TruckAI {
 
 		case FIRST_CONVOY_LEADER:
 			// TODO: if convoy is full send end to end message
+			desiredSpeed = STABILIZING_SPEED;
 			break;
 
 		case FIRST_CONVOY_MEMBER:
 			// maintain distance to next truck
 			if (nextTruckGap > MAX_CONVOY_GAP) {
-				desiredSpeed = MAINTAIN_CATCH_SPEED;
+				desiredSpeed = CATCHING_SPEED;
 			}
 			if (nextTruckGap < MIN_CONVOY_GAP
 					&& desiredSpeed > MIN_REASONABLE_SPEED) {
@@ -170,9 +168,10 @@ public class TruckAI {
 				desiredSpeed -= BRAKE_PEDAL_DECEL_VALUE;
 			}
 			// if not, go catching speed.
-			if (nextTruckGap > MAX_CONVOY_GAP && nextTruckGap < 100.0) {
+			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < 100.0) {
 				desiredSpeed = CATCHING_SPEED;
 			}
+			//if in sweetspot
 			// if gap is substantial, drive really fast
 			if (nextTruckGap > 100) {
 				desiredSpeed = MAX_REASONABLE_SPEED;
@@ -235,7 +234,7 @@ public class TruckAI {
 		// logic to try to make truck its desired speed by modifying
 		// acceleration
 		if (theTruck.getSpeed() < desiredSpeed) {
-			if (theTruck.getAcceleration() < MAX_ACCELERATION) {
+			if (theTruck.getAcceleration() < MAX_ACCELERATION -0.1) {
 				if (theTruck.getAcceleration() < 0) {
 					theTruck.setAcceleration(0);
 				} else {
@@ -244,7 +243,7 @@ public class TruckAI {
 				}
 			}
 		} else {
-			if (theTruck.getAcceleration() > MIN_ACCELERATION) {
+			if (theTruck.getAcceleration() > MIN_ACCELERATION + 0.3) {
 				if (theTruck.getAcceleration() > 0) {
 					theTruck.setAcceleration(0);
 				} else {

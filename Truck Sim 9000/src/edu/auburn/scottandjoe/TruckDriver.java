@@ -323,11 +323,9 @@ public class TruckDriver {
 			AIMap.put(0, "NEW_TRUCK");
 			AIMap.put(1, "STABILIZING");
 			AIMap.put(2, "STABILIZED");
-			AIMap.put(3, "SOLO_CONVOY");
-			AIMap.put(4, "MULTI_CONVOY");
-			AIMap.put(5, "FULL_CONVOY");
-			AIMap.put(6, "COLLIDED");
-			AIMap.put(7, "MERGING_CONVOY");
+			AIMap.put(3, "FIRST_CONVOY_LEADER");
+			AIMap.put(4, "FIRST_CONVOY_MEMBER");
+			AIMap.put(5, "NON_FIRST_CONVOY_MEMBER");
 			// TODO: add some tools to save and output average or current tick
 			// computation time
 			// in order to better fine tune the tick rate as low as possible
@@ -429,11 +427,9 @@ public class TruckDriver {
 			AIMap.put(0, "NEW_TRUCK");
 			AIMap.put(1, "STABILIZING");
 			AIMap.put(2, "STABILIZED");
-			AIMap.put(3, "SOLO_CONVOY");
-			AIMap.put(4, "MULTI_CONVOY");
-			AIMap.put(5, "FULL_CONVOY");
-			AIMap.put(6, "COLLIDED");
-			AIMap.put(7, "MERGING_CONVOY");
+			AIMap.put(3, "FIRST_CONVOY_LEADER");
+			AIMap.put(4, "FIRST_CONVOY_MEMBER");
+			AIMap.put(5, "NON_FIRST_CONVOY_MEMBER");
 			DecimalFormat df = new DecimalFormat("#0.00");
 			DecimalFormat df2 = new DecimalFormat("#0.000000");
 			while (true) {
