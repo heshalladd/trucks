@@ -38,7 +38,7 @@ public class Viewer extends JPanel implements Runnable {
 	boolean radioOn = false;
 	JButton b3;
 	TruckDataList mTruckDataList;
-	boolean mFroggerMode = true;
+	boolean mFroggerMode = false;
 	static int mFrogX = 200;
 	static int mFrogY = 200;
 	int mSelectedTruck = -1;

@@ -14,11 +14,11 @@ public class Receiver {
 	public void startUDPListener() {
 		try {
 			System.out.println("Starting UDP Listener...");
-			DatagramSocket serverSocket = new DatagramSocket(10127);
+			DatagramSocket serverSocket = new DatagramSocket(9876);
 			byte[] receiveData = new byte[1024];
 			int number;
 			int locationX;
-			int platoonId;
+			String platoonId;
 			String information;
 
 			while (true) {
@@ -29,7 +29,7 @@ public class Receiver {
 				StringTokenizer tokenizer = new StringTokenizer(data, ",");
 				number = Integer.parseInt(tokenizer.nextToken());
 				locationX = Integer.parseInt(tokenizer.nextToken());
-				platoonId = Integer.parseInt(tokenizer.nextToken());
+				platoonId = tokenizer.nextToken();
 				information = tokenizer.nextToken();
 				mTruckDataList.truckDataList.get(number).updateData(number,
 						locationX, platoonId, information);
