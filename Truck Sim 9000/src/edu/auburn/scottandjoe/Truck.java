@@ -94,7 +94,7 @@ public class Truck {
 
 	// enum for hashmaps
 	public enum MessageKeys {
-		SEQUENCE_NUMBER, ACCELERATION, POSITION, SPEED, LANE, DESIRED_LANE, DESIRED_PIC, CONVOY_ID, ORDER_IN_CONVOY, PROBABLY_FIRST
+		MESSAGE_TYPE, SEQUENCE_NUMBER, ACCELERATION, POSITION, SPEED, LANE, DESIRED_LANE, DESIRED_PIC, CONVOY_ID, ORDER_IN_CONVOY, PROBABLY_FIRST
 	}
 
 	// initializes a truck object. truck numbering conflicts are not handled,
