@@ -32,7 +32,7 @@ public class Receiver {
 				number = Integer.parseInt(tokenizer.nextToken());
 				locationX = Integer.parseInt(tokenizer.nextToken());
 				platoonId = tokenizer.nextToken();
-				if(platoonIdMap.containsKey(platoonId)){
+				if(!platoonIdMap.containsKey(platoonId)){
 					platoonIdMap.put(platoonId, mTruckDataList.getRandomColor());
 				}
 				information = tokenizer.nextToken();

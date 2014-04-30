@@ -99,7 +99,7 @@ public class Viewer extends JPanel implements Runnable {
 					truckDataUnit = mTruckDataList.truckDataList.get(truckNumber);
 					if (truckDataUnit.mAlive) {
 						x = truckDataUnit.mLocationX; 
-						truckRectangle = new Rectangle(x%1280,getYFromX(x*3),75,22);
+						truckRectangle = new Rectangle((x*3)%1280,getYFromX(x*3),75,22);
 						if(truckRectangle.contains(p)){
 							System.out.println("TruckNumber: "+ truckDataUnit.mNumber);
 							mSelectedTruck = truckDataUnit.mNumber;
@@ -230,9 +230,9 @@ public class Viewer extends JPanel implements Runnable {
 
 				}
 				if(mPlatoonView){
+					Rectangle truckRectangle = new Rectangle(x,y,75,22);
 					g2d.setColor(mTruckDataList.platoonIdMap.get(truckDataUnit.mPlatoonId));
-					g2d.fillRect(x, y, 75, 22);
-
+					g.fillRoundRect(x, y, 75, 22, 10, 10);
 				}
 				
 				if(mFroggerMode){
