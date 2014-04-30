@@ -201,7 +201,7 @@ public class TruckAI {
 
 		// adopt (place in convoy + 1) of nearest truck in front of you
 		if (nextTruck != null) {
-			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy());
+			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy()+1);
 		}
 
 		// become leader if leader left

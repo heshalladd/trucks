@@ -307,16 +307,19 @@ public class Truck {
 	}
 
 	public double getNextTruckPos() {
-		double nextTruckPos = 999999.0;
-		for (int i = 0; i < truckCache.length; i++) {
-			if (truckInitialized[i] && truckNumber - 1 != i
-					&& truckCache[i].getPos() < nextTruckPos
-					&& truckCache[i].getPos() > pos) {
-				nextTruckPos = truckCache[i].getPos();
-				break;
+		Truck nextTruck = null;
+		double nextTruckPos = 9999999999.0;
+		for (int i = 0; i < truckInitialized.length; i++) {
+			// check for not self, initialized, position greater than self,
+			// position less than running next truck dist calc
+			if ((i + 1) != truckNumber && truckInitialized[i]
+					&& truckCache[i].getPos() > pos
+					&& truckCache[i].getPos() < nextTruckPos) {
+				nextTruck = truckCache[i];
+				nextTruckPos = nextTruck.getPos();
 			}
 		}
-		if (nextTruckPos == 999999.0) {
+		if (nextTruckPos == 9999999999.0) {
 			return 0;
 		} else {
 			return nextTruckPos;
