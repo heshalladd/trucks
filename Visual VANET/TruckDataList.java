@@ -22,7 +22,7 @@ public class TruckDataList {
 	
 	public Color getRandomColor(){
 		Random random = new Random();
-		return new Color(random.nextInt(255),random.nextInt(255),random.nextInt(255),100);
+		return new Color(random.nextInt(255),random.nextInt(255),random.nextInt(255),145);
 	}
 
 }

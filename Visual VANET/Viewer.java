@@ -168,7 +168,7 @@ public class Viewer extends JPanel implements Runnable {
 		frame.add(this);
 		frame.setSize(1280, 780);
 		frame.setVisible(true);
-		frame.setLocation(1280, 0);
+		//frame.setLocation(1280, 0);
 		frame.isFocusable();
 		this.requestFocusInWindow();
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -230,9 +230,8 @@ public class Viewer extends JPanel implements Runnable {
 
 				}
 				if(mPlatoonView){
-					Rectangle truckRectangle = new Rectangle(x,y,75,22);
 					g2d.setColor(mTruckDataList.platoonIdMap.get(truckDataUnit.mPlatoonId));
-					g.fillRoundRect(x, y, 75, 22, 10, 10);
+					g.fillRect(x, y, 52, 13);
 				}
 				
 				if(mFroggerMode){
