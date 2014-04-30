@@ -100,13 +100,7 @@ public class TruckAI {
 			// set desired speed to stabilizing speed
 			desiredSpeed = STABILIZING_SPEED;
 			// start stabilizing countdown timer using tick rate for reference
-			stabilizingCountdown = (int) (TICK_RATE * (Math.ceil(Math.max(
-					MAX_REASONABLE_SPEED - STABILIZING_SPEED, STABILIZING_SPEED
-							- MIN_REASONABLE_SPEED)
-					/ Math.min(MAX_ACCELERATION, MIN_ACCELERATION))));
-
-			// !debug set stabilizing countdown to what it should be
-			stabilizingCountdown = 67;
+			stabilizingCountdown = TICK_RATE * 10;
 
 			// move to next state
 			truckAIState = STABILIZING;
@@ -190,14 +184,15 @@ public class TruckAI {
 			// accelerate while maintaining distance
 			for (int i = 0; i < truckCache.length; i++) {
 				if (truckInitialized[i]
-						&& theTruck.getTruckNumber() - 1 == i
 						&& !truckCache[i].getProbablyFirst()
 						&& truckCache[i].getConvoyID().equals(
 								theTruck.getConvoyID())
 						&& truckCache[i].getOrderInConvoy() == 1
 						&& desiredSpeed == STABILIZING_SPEED) {
 					desiredSpeed = MULTI_CATCHING_SPEED;
-					break;
+				}
+				if(theTruck.getOrderInConvoy() == 1 && !theTruck.getProbablyFirst()) {
+					desiredSpeed = MULTI_CATCHING_SPEED;
 				}
 			}
 			// if another truck is found in a different convoy, attempt to
@@ -307,6 +302,18 @@ public class TruckAI {
 						+ TRUCK_LENGTH) {
 			desiredSpeed = STABILIZING_SPEED;
 		}
+		//if there is no next truck, make sure that this truck is not inaccurately thinking it isn't first
+		if (nextTruck == null && !theTruck.getProbablyFirst()) {
+			theTruck.setOrderInConvoy(1);
+		}
+		//if for some reason the speed drops below the min reasonable, help it out of a rut
+		if (desiredSpeed < MIN_REASONABLE_SPEED) {
+			desiredSpeed += 0.5;
+			if(!theTruck.getProbablyFirst()) {
+				desiredSpeed = CATCHING_SPEED;
+			}
+		}
+		
 		if (nextTruck != null && nextTruck.getPos() - theTruck.getPos() < 40) {
 			theTruck.setConvoyID(nextTruck.getConvoyID());
 			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy() + 1);

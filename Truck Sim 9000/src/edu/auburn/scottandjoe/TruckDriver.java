@@ -498,9 +498,10 @@ public class TruckDriver {
 					System.out.print("Known Trucks");
 					for(int i = 0; i < theTruck.getTruckInitialized().length; i++) {
 						if(theTruck.getTruckInitialized()[i]) {
-							System.out.print("||" + (i+1));
+							System.out.print("||" + (i+1) + ":" + df.format(theTruck.getTruckCache()[i].getPos()));
 						}
 					}
+					System.out.println();
 					System.out.print("Pos Cache for Messaging");
 					double[] posCache = theTruck.getTruckPosCache();
 					for (int i = 0; i < posCache.length; i++) {
