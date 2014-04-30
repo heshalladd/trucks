@@ -8,73 +8,63 @@ public class TruckAI {
 	private static final double MIN_ACCELERATION = Truck.MIN_ACCELERATION;
 	private static final double MAX_REASONABLE_SPEED = Truck.MAX_REASONABLE_SPEED;
 	private static final double MIN_REASONABLE_SPEED = Truck.MIN_REASONABLE_SPEED;
-	// max lane and min lane aren't used currently because of lack of lane
-	// functionality
-	@SuppressWarnings("unused")
-	private static final int MAX_LANE = Truck.MIN_LANE;
-	@SuppressWarnings("unused")
-	private static final int MIN_LANE = Truck.MAX_LANE;
 	private static final double TRUCK_LENGTH = Truck.TRUCK_LENGTH;
 	private static final int TICK_RATE = Controller.TICK_RATE;
 
 	// ai constants
 	private static final double STABILIZING_SPEED = 31.3;
-	private static final double CATCHING_SPEED = 33.2;
-	private static final double SOLO_CATCHING_SPEED = 33.2;
-	private static final double MERGING_CATCHING_SPEED = 33.2;
-	private static final double MULTI_CATCHING_SPEED = 33.2;
+	private static final double MAINTAIN_CATCH_SPEED = 32.3;
+	private static final double CATCHING_SPEED = 34.2;
 	private static final double MIN_CONVOY_GAP = 10.0;
 	private static final double MAX_CONVOY_GAP = 20.0;
 	private static final double GAS_PEDAL_ACCEL_VALUE = (0.1 / (double) TICK_RATE);
 	private static final double BRAKE_PEDAL_DECEL_VALUE = (0.3 / (double) TICK_RATE);
+
 	// truck state magic number constants
 	// ai states:
 	// 0 - new truck object. has had no thoughts
-	// 1 - just started, is waiting minimum time for all trucks to stabilize
+	// 1 - just started, is waiting a short time for all trucks to stabilize
 	// speed
 	// 2 - speeds initially stabilized
-	// 3 - in solo convoy and seeking others
-	// 4 - in a multi convoy and seeking others
-	// 5 - in a full convoy
-	// 6 - collided
-	// 7 - merging convoy(trying to join the convoy in front of it)
+	// 3 - is 1st and is leader of convoy (go stabilizing speed)
+	// 4 - is in convoy that has person who is 1st (maintain gap)
+	// 5 - is in convoy that doesn't have a leader who is 1st (catch others and
+	// avoid collisions)
+	// 6 - convoy is full. if truck is leader, send end to end packet 1/s
 	public static final int NEW_TRUCK = 0;
 	public static final int STABILIZING = 1;
 	public static final int STABILIZED = 2;
-	public static final int SOLO_CONVOY = 3;
-	public static final int MULTI_CONVOY = 4;
-	public static final int FULL_CONVOY = 5;
-	public static final int COLLIDED = 6;
-	public static final int MERGING_CONVOY = 7;
+	public static final int FIRST_CONVOY_LEADER = 3;
+	public static final int FIRST_CONVOY_MEMBER = 4;
+	public static final int NON_FIRST_CONVOY_MEMBER = 5;
+	public static final int FULL_CONVOY = 6;
 
 	// ai variables
 	private int stabilizingCountdown = 0;
 	private double startPos;
 	private double desiredSpeed = 0;
 	private int truckAIState = NEW_TRUCK;
+	private boolean fullConvoy = false;
 
 	// always call doAI after you have handled messages for this tick in order
 	// to avoid race conditions and inaccurate calculations for distances.
-	// TODO: continue tweaking ai to make it better. it is satisfactory at the
-	// moment
 
 	public TruckAI() {
 		// only has a constructor so that it can keep a state
 		// if it was just static, this would be cumbersome to work around
 	}
 
-	public int getAIState() {
-		return this.truckAIState;
-	}
-
 	public void doAI(Truck theTruck) {
 		// grab truck cache and truck initialized cache for less ugly code
 		Truck[] truckCache = theTruck.getTruckCache();
 		boolean[] truckInitialized = theTruck.getTruckInitialized();
+		Truck nextTruck = null;
+		double nextTruckPos = 9999999999.0;
+		double nextTruckGap = 9999999999.0;
 
+		// check if newest update to cache makes this truck not first
 		if (theTruck.getProbablyFirst()
 				&& theTruck.getLastMessageMapTime() > 0l) {
-			// check if newest update to cache makes this truck not first
 			HashMap<Truck.MessageKeys, String> lastMessageMap = theTruck
 					.getLastMessageMap();
 			double messagePos = Double.parseDouble(lastMessageMap
@@ -83,6 +73,19 @@ public class TruckAI {
 				theTruck.setProbablyFirst(false);
 			}
 		}
+
+		// calculate the next truck
+		for (int i = 0; i < truckInitialized.length; i++) {
+			// check for not self, initialized, position greater than self,
+			// position less than running next truck dist calc
+			if ((i + 1) != theTruck.getTruckNumber() && truckInitialized[i]
+					&& truckCache[i].getPos() > theTruck.getPos()
+					&& truckCache[i].getPos() < nextTruckPos) {
+				nextTruck = truckCache[i];
+				nextTruckPos = nextTruck.getPos();
+			}
+		}
+		nextTruckGap = nextTruckPos - theTruck.getPos() - TRUCK_LENGTH;
 
 		// switch statement to enter state logic
 		switch (truckAIState) {
@@ -115,156 +118,76 @@ public class TruckAI {
 			break;
 
 		case STABILIZED:
-			// // become a solo convoy and move over to lane 1
-			// desiredLane = 1;
-			truckAIState = SOLO_CONVOY;
-			// NOTE: this state is here in case something else needs to happen
-			// when tweaking AI code
-			break;
+			// determine which of the three main states the truck is
 
-		case SOLO_CONVOY:
-			// if there is a truck in this convoy with position equal to
-			// population size, become full convoy
-			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
-				truckAIState = FULL_CONVOY;
-			}
-			// search for a truck ahead
-			for (int i = 0; i < truckCache.length; i++) {
-				// NOTE: this biases forward merging
-				if (truckInitialized[i]
-						&& theTruck.getTruckNumber() - 1 != i
-						&& truckCache[i].getPos() > theTruck.getPos()
-						&& !truckCache[i].getConvoyID().equals(
-								theTruck.getConvoyID())
-						&& truckCache[i].getLane() == theTruck.getLane()) {
-					// if a truck has been found ahead, change to merging convoy
-					// and join the convoy ahead
-					truckAIState = MERGING_CONVOY;
-					desiredSpeed = MERGING_CATCHING_SPEED;
-					theTruck.setConvoyID(truckCache[i].getConvoyID());
-					theTruck.setOrderInConvoy(truckCache[i].getOrderInConvoy() + 1);
-					break;
-				}
+			// if 1st, set to first convoy leader and set desired speed to
+			// stabilizing
+			if (theTruck.getProbablyFirst()) {
+				truckAIState = FIRST_CONVOY_LEADER;
+				break;
 			}
 
-			// based on positional guess, accelerate or decelerate to find more
-			// trucks
-			// if not first, accelerate
-			if (!theTruck.getProbablyFirst()) {
-				desiredSpeed = SOLO_CATCHING_SPEED;
-			}
-			break;
-
-		case MULTI_CONVOY:
-			// if there is a truck in this convoy with position equal to the
-			// population, become full
-			// convoy
-			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
-				truckAIState = FULL_CONVOY;
-			}
-
-			// make sure that you get the platoon stuff right
-			Truck nextTruck1 = null;
-			double nextTruckPos1 = 999999.0;
-			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-						&& truckCache[i].getPos() < nextTruckPos1
-						&& truckCache[i].getPos() > theTruck.getPos()) {
-					nextTruck1 = truckCache[i];
-					nextTruckPos1 = nextTruck1.getPos();
-					break;
-				}
-			}
-			if (nextTruck1 != null) {
-				theTruck.setConvoyID(nextTruck1.getConvoyID());
-				theTruck.setOrderInConvoy(nextTruck1.getOrderInConvoy() + 1);
-			}
-
-			// if the leader of the convoy isn't the first truck,
-			// accelerate while maintaining distance
-			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i]
-						&& !truckCache[i].getProbablyFirst()
+			// if in 1st convoy, set to first convoy member
+			for (int i = 0; i < truckInitialized.length; i++) {
+				// check for not self, initialized, same convoy, and if first
+				if ((i + 1) != theTruck.getTruckNumber()
+						&& truckInitialized[i]
 						&& truckCache[i].getConvoyID().equals(
 								theTruck.getConvoyID())
-						&& truckCache[i].getOrderInConvoy() == 1
-						&& desiredSpeed == STABILIZING_SPEED) {
-					desiredSpeed = MULTI_CATCHING_SPEED;
-				}
-				if(theTruck.getOrderInConvoy() == 1 && !theTruck.getProbablyFirst()) {
-					desiredSpeed = MULTI_CATCHING_SPEED;
+						&& truckCache[i].getProbablyFirst()) {
+					truckAIState = FIRST_CONVOY_MEMBER;
+					break;
 				}
 			}
-			// if another truck is found in a different convoy, attempt to
-			// join their convoy if they are ahead (must disconnect from current
-			// convoy and become solo for a tick)
-			for (int i = 0; i < truckCache.length; i++) {
-				// NOTE: this biases forward merging
-				if (truckInitialized[i]
-						&& theTruck.getTruckNumber() - 1 != i
-						&& truckCache[i].getPos() > theTruck.getPos()
-						&& !truckCache[i].getConvoyID().equals(
+
+			// if not in 1st convoy, set to non first convoy member, set desired
+			// speed to catching speed
+			truckAIState = NON_FIRST_CONVOY_MEMBER;
+			break;
+
+		case FIRST_CONVOY_LEADER:
+			// TODO: if convoy is full send end to end message
+			break;
+
+		case FIRST_CONVOY_MEMBER:
+			// maintain distance to next truck
+			if (nextTruckGap > MAX_CONVOY_GAP) {
+				desiredSpeed = MAINTAIN_CATCH_SPEED;
+			}
+			if (nextTruckGap < MIN_CONVOY_GAP
+					&& desiredSpeed > MIN_REASONABLE_SPEED) {
+				desiredSpeed -= BRAKE_PEDAL_DECEL_VALUE;
+			}
+			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < MAX_CONVOY_GAP) {
+				desiredSpeed = STABILIZING_SPEED;
+			}
+			break;
+
+		case NON_FIRST_CONVOY_MEMBER:
+			// if too close to next, avoid collision
+			if (nextTruckGap < MIN_CONVOY_GAP
+					&& desiredSpeed > MIN_REASONABLE_SPEED) {
+				desiredSpeed -= BRAKE_PEDAL_DECEL_VALUE;
+			}
+			// if not, go catching speed.
+			if (nextTruckGap > MAX_CONVOY_GAP && nextTruckGap < 100.0) {
+				desiredSpeed = CATCHING_SPEED;
+			}
+			// if gap is substantial, drive really fast
+			if (nextTruckGap > 100) {
+				desiredSpeed = MAX_REASONABLE_SPEED;
+			}
+			
+			//check if truck has become part of 1st convoy
+			for (int i = 0; i < truckInitialized.length; i++) {
+				// check for not self, initialized, same convoy, and if first
+				if ((i + 1) != theTruck.getTruckNumber()
+						&& truckInitialized[i]
+						&& truckCache[i].getConvoyID().equals(
 								theTruck.getConvoyID())
-						&& truckCache[i].getPos() - theTruck.getPos() > MAX_CONVOY_GAP
-								+ TRUCK_LENGTH
-						&& truckCache[i].getLane() == theTruck.getLane()) {
-					truckAIState = SOLO_CONVOY;
+						&& truckCache[i].getProbablyFirst()) {
+					truckAIState = FIRST_CONVOY_MEMBER;
 					break;
-				}
-			}
-			break;
-
-		case FULL_CONVOY:
-			// TODO: if in a full convoy, broadcast end to end timing packets
-			// and do some calculations
-			break;
-
-		case MERGING_CONVOY:
-			// if there is a truck in this convoy with position equal to the
-			// population, become full
-			// convoy
-			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
-				truckAIState = FULL_CONVOY;
-			}
-
-			// make sure that you get the platoon stuff right
-			Truck nextTruck2 = null;
-			double nextTruckPos2 = 999999.0;
-			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-						&& truckCache[i].getPos() < nextTruckPos2
-						&& truckCache[i].getPos() > theTruck.getPos()) {
-					nextTruck2 = truckCache[i];
-					nextTruckPos2 = nextTruck2.getPos();
-					break;
-				}
-			}
-			if (nextTruck2 != null) {
-				theTruck.setConvoyID(nextTruck2.getConvoyID());
-				theTruck.setOrderInConvoy(nextTruck2.getOrderInConvoy() + 1);
-			}
-
-			// try to close the gap to an acceptable range with the truck
-			// in front of it
-			Truck nextTruck = null;
-			double nextTruckPos = 999999.0;
-			for (int i = 0; i < truckCache.length; i++) {
-				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-						&& truckCache[i].getPos() < nextTruckPos
-						&& truckCache[i].getPos() > theTruck.getPos()) {
-					nextTruck = truckCache[i];
-					nextTruckPos = truckCache[i].getPos();
-					break;
-				}
-			}
-			if (nextTruck != null) {
-				theTruck.setConvoyID(nextTruck.getConvoyID());
-				theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy() + 1);
-				if (nextTruck.getPos() - theTruck.getPos() < MAX_CONVOY_GAP
-						+ TRUCK_LENGTH) {
-					// once within acceptable range, become a MULTI_CONVOY
-					truckAIState = MULTI_CONVOY;
-					desiredSpeed = STABILIZING_SPEED;
 				}
 			}
 			break;
@@ -272,56 +195,47 @@ public class TruckAI {
 		default:
 			break;
 		}
+		// adopt convoy id of nearest truck in front of you
+		if (nextTruck != null && !nextTruck.getConvoyID().equals(theTruck.getConvoyID())) {
+			theTruck.setConvoyID(nextTruck.getConvoyID());
+		}
 
-		// logic to try to maintain a gap
-		Truck nextTruck = null;
-		double nextTruckPos = 999999.0;
-		for (int i = 0; i < truckCache.length; i++) {
-			if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-					&& truckCache[i].getPos() < nextTruckPos
-					&& truckCache[i].getPos() > theTruck.getPos()) {
-				nextTruck = truckCache[i];
-				nextTruckPos = truckCache[i].getPos();
-				break;
+		// adopt (place in convoy + 1) of nearest truck in front of you
+		if (nextTruck != null) {
+			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy());
+		}
+
+		// become leader if leader left
+		boolean leaderExists = false;
+		if (theTruck.getOrderInConvoy() == 1) {
+			leaderExists = true;
+		}
+		for (int i = 0; i < truckInitialized.length; i++) {
+			// check for i = not self, initialized, a truck ahead, with same
+			// convoy, with order smaller than self
+			if ((i + 1) != theTruck.getTruckNumber()
+					&& truckInitialized[i]
+					&& truckCache[i].getPos() > theTruck.getPos()
+					&& truckCache[i].getConvoyID().equals(
+							theTruck.getConvoyID())
+					&& truckCache[i].getOrderInConvoy() < theTruck
+							.getOrderInConvoy()) {
+				leaderExists = true;
 			}
 		}
-		if (nextTruck != null
-				&& nextTruck.getPos() - theTruck.getPos() < MIN_CONVOY_GAP
-						+ TRUCK_LENGTH && desiredSpeed > MIN_REASONABLE_SPEED) {
-			desiredSpeed = desiredSpeed - 0.15;
-		}
-		if (nextTruck != null
-				&& nextTruck.getPos() - theTruck.getPos() > MAX_CONVOY_GAP
-						+ TRUCK_LENGTH && desiredSpeed < CATCHING_SPEED) {
-			desiredSpeed = desiredSpeed + 0.05;
-		}
-		if (nextTruck != null
-				&& nextTruck.getPos() - theTruck.getPos() > MIN_CONVOY_GAP
-						+ TRUCK_LENGTH
-				&& nextTruck.getPos() - theTruck.getPos() < MAX_CONVOY_GAP
-						+ TRUCK_LENGTH) {
-			desiredSpeed = STABILIZING_SPEED;
-		}
-		//if there is no next truck, make sure that this truck is not inaccurately thinking it isn't first
-		if (nextTruck == null && !theTruck.getProbablyFirst()) {
+		if(!leaderExists) {
 			theTruck.setOrderInConvoy(1);
 		}
-		//if for some reason the speed drops below the min reasonable, help it out of a rut
-		if (desiredSpeed < MIN_REASONABLE_SPEED) {
-			desiredSpeed += 0.5;
-			if(!theTruck.getProbablyFirst()) {
-				desiredSpeed = CATCHING_SPEED;
-			}
+
+		// if convoy size is the same as the simulation population, become full
+		if(theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
+			fullConvoy = true;
 		}
-		
-		if (nextTruck != null && nextTruck.getPos() - theTruck.getPos() < 40) {
-			theTruck.setConvoyID(nextTruck.getConvoyID());
-			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy() + 1);
-		}
+
 		// logic to try to make truck its desired speed by modifying
 		// acceleration
 		if (theTruck.getSpeed() < desiredSpeed) {
-			if (theTruck.getAcceleration() < MAX_ACCELERATION - 0.1) {
+			if (theTruck.getAcceleration() < MAX_ACCELERATION) {
 				if (theTruck.getAcceleration() < 0) {
 					theTruck.setAcceleration(0);
 				} else {
@@ -330,7 +244,7 @@ public class TruckAI {
 				}
 			}
 		} else {
-			if (theTruck.getAcceleration() > MIN_ACCELERATION + 0.4) {
+			if (theTruck.getAcceleration() > MIN_ACCELERATION) {
 				if (theTruck.getAcceleration() > 0) {
 					theTruck.setAcceleration(0);
 				} else {
@@ -343,5 +257,9 @@ public class TruckAI {
 			theTruck.setAcceleration(0);
 		}
 
+	}
+
+	public int getAIState() {
+		return this.truckAIState;
 	}
 }
