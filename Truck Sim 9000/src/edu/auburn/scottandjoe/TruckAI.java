@@ -89,7 +89,6 @@ public class TruckAI {
 		case NEW_TRUCK:
 			// save initial stuff for later calculation purposes
 			startPos = theTruck.getPos();
-			desiredSpeed = theTruck.getSpeed();
 			// predict approximate position relative to other trucks based on
 			// start pos
 			if (startPos == Truck.MAX_INITIAL_POS) {
@@ -131,8 +130,7 @@ public class TruckAI {
 
 		case SOLO_CONVOY:
 			// if there is a truck in this convoy with position equal to
-			// population size, become full
-			// convoy
+			// population size, become full convoy
 			if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 				truckAIState = FULL_CONVOY;
 			}
@@ -172,14 +170,13 @@ public class TruckAI {
 			}
 
 			// make sure that you get the platoon stuff right
-			Truck[] truckCacheFreeze1 = truckCache.clone();
 			Truck nextTruck1 = null;
 			double nextTruckPos1 = 999999.0;
-			for (int i = 0; i < truckCacheFreeze1.length; i++) {
+			for (int i = 0; i < truckCache.length; i++) {
 				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-						&& truckCacheFreeze1[i].getPos() < nextTruckPos1
-						&& truckCacheFreeze1[i].getPos() > theTruck.getPos()) {
-					nextTruck1 = truckCacheFreeze1[i];
+						&& truckCache[i].getPos() < nextTruckPos1
+						&& truckCache[i].getPos() > theTruck.getPos()) {
+					nextTruck1 = truckCache[i];
 					nextTruckPos1 = nextTruck1.getPos();
 					break;
 				}
@@ -236,14 +233,13 @@ public class TruckAI {
 			}
 
 			// make sure that you get the platoon stuff right
-			Truck[] truckCacheFreeze2 = truckCache.clone();
 			Truck nextTruck2 = null;
 			double nextTruckPos2 = 999999.0;
-			for (int i = 0; i < truckCacheFreeze2.length; i++) {
+			for (int i = 0; i < truckCache.length; i++) {
 				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-						&& truckCacheFreeze2[i].getPos() < nextTruckPos2
-						&& truckCacheFreeze2[i].getPos() > theTruck.getPos()) {
-					nextTruck2 = truckCacheFreeze2[i];
+						&& truckCache[i].getPos() < nextTruckPos2
+						&& truckCache[i].getPos() > theTruck.getPos()) {
+					nextTruck2 = truckCache[i];
 					nextTruckPos2 = nextTruck2.getPos();
 					break;
 				}
@@ -255,15 +251,14 @@ public class TruckAI {
 
 			// try to close the gap to an acceptable range with the truck
 			// in front of it
-			Truck[] truckCacheFreeze = truckCache.clone();
 			Truck nextTruck = null;
 			double nextTruckPos = 999999.0;
-			for (int i = 0; i < truckCacheFreeze.length; i++) {
+			for (int i = 0; i < truckCache.length; i++) {
 				if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-						&& truckCacheFreeze[i].getPos() < nextTruckPos
-						&& truckCacheFreeze[i].getPos() > theTruck.getPos()) {
-					nextTruck = truckCacheFreeze[i];
-					nextTruckPos = truckCacheFreeze[i].getPos();
+						&& truckCache[i].getPos() < nextTruckPos
+						&& truckCache[i].getPos() > theTruck.getPos()) {
+					nextTruck = truckCache[i];
+					nextTruckPos = truckCache[i].getPos();
 					break;
 				}
 			}
@@ -284,15 +279,14 @@ public class TruckAI {
 		}
 
 		// logic to try to maintain a gap
-		Truck[] truckCacheFreeze = truckCache.clone();
 		Truck nextTruck = null;
 		double nextTruckPos = 999999.0;
-		for (int i = 0; i < truckCacheFreeze.length; i++) {
+		for (int i = 0; i < truckCache.length; i++) {
 			if (truckInitialized[i] && theTruck.getTruckNumber() - 1 != i
-					&& truckCacheFreeze[i].getPos() < nextTruckPos
-					&& truckCacheFreeze[i].getPos() > theTruck.getPos()) {
-				nextTruck = truckCacheFreeze[i];
-				nextTruckPos = truckCacheFreeze[i].getPos();
+					&& truckCache[i].getPos() < nextTruckPos
+					&& truckCache[i].getPos() > theTruck.getPos()) {
+				nextTruck = truckCache[i];
+				nextTruckPos = truckCache[i].getPos();
 				break;
 			}
 		}

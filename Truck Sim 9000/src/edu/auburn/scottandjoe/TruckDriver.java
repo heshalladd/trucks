@@ -495,6 +495,12 @@ public class TruckDriver {
 					System.out.println("Cache Updates:"
 							+ theTruck.getCacheUpdates() + "||Initializations:"
 							+ theTruck.getInitializations());
+					System.out.print("Known Trucks");
+					for(int i = 0; i < theTruck.getTruckInitialized().length; i++) {
+						if(theTruck.getTruckInitialized()[i]) {
+							System.out.print("||" + (i+1));
+						}
+					}
 					System.out.print("Pos Cache for Messaging");
 					double[] posCache = theTruck.getTruckPosCache();
 					for (int i = 0; i < posCache.length; i++) {
