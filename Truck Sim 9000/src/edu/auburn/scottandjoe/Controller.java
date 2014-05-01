@@ -319,8 +319,8 @@ public class Controller {
 								.println("[WARNING] There was a collision while stabilizing. Attempting to start new simulation.");
 						waitAndStart();
 					} else {
-						waitForStartFromUser();
 						System.out.println("[UIH] Type \"start\" to restart the simulation.");
+						waitForStartFromUser();
 					}
 					
 					lastStartTime = System.currentTimeMillis();
@@ -374,7 +374,7 @@ public class Controller {
 					e.printStackTrace();
 				}
 				if((System.currentTimeMillis() - simulationStartTime)/1000 >= 300) {
-					System.out.println("[NORMAL] Simulation ended (5 minute timer)");
+					System.out.println("[NORMAL] Simulation ended (5 minute timer) Type \"start\" to run again.");
 					for (int i = 0; i < requests.length; i++) {
 						try {
 							requests[i].put("" + (i + 1) + "," + REQUEST + ","

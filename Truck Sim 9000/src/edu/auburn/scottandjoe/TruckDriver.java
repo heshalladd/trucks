@@ -25,6 +25,7 @@ public class TruckDriver {
 	private static int desiredTruckSimPop = 0;
 	private static long lastTickTime = 0l;
 	private static long lastTickInterval = 0l;
+	private static RollingAverage averageEndToEnd = new RollingAverage(300);
 
 	// variables for reinitializing
 	private static int initTruckNumber;
@@ -347,6 +348,7 @@ public class TruckDriver {
 				// while loop to do tick limited truck updates
 				long lastVisMessageTime = 0l;
 				long simulationStartTime = System.currentTimeMillis();
+				long lastEndToEndValue = 0l;
 				while (running && initialized) {
 					try {
 						long theTime = System.nanoTime();
@@ -379,6 +381,10 @@ public class TruckDriver {
 										+ " || Hello Sent:"
 										+ theTruck.getHelloMessagesSent();
 							}
+							if((theTruck.getLastRoundTripTime() / 2l) != lastEndToEndValue) {
+								lastEndToEndValue = theTruck.getLastRoundTripTime() / 2l;
+								averageEndToEnd.add((double)theTruck.getLastRoundTripTime() / 2000000.0);
+							}
 							String visMessage = ""
 									+ theTruck.getTruckNumber()
 									+ ","
@@ -389,8 +395,9 @@ public class TruckDriver {
 									+ "Truck Number: "
 									+ theTruck.getTruckNumber()
 									+ "     Last End to End Time: "
-									+ (theTruck.getLastRoundTripTime() / 2l)
-									+ " nanoseconds"
+									+ df.format((double)theTruck.getLastRoundTripTime() / 2000000.0)
+									+ " ms"
+									+ " || Average:" + df.format(averageEndToEnd.getAverage())
 									+ "\n"
 									+ theTruck.getConvoyID()
 									+ "\nOrder: "
@@ -423,14 +430,14 @@ public class TruckDriver {
 									+ theTruck.getLastAIProcessTime()
 									+ " nanoseconds"
 									+ "\nNew Msg Interval:"
-									+ theTruck.getLastMessageInterval()
-									+ " nanoseconds"
+									+ df.format((double)theTruck.getLastMessageInterval() / 1000000.0)
+									+ " ms"
 									+ "\nWhole Tick:"
-									+ lastTickTime
-									+ " nanoseconds"
+									+ df.format((double)lastTickTime / 1000000.0)
+									+ " ms"
 									+ "\nWhole Tick Interval:"
-									+ lastTickInterval
-									+ " nanoseconds"
+									+ df.format((double)lastTickInterval / 1000000.0)
+									+ " nms"
 									+ "\nRUNNING TIME================"
 									+ "\n"
 									+ df2.format(((System.currentTimeMillis() - simulationStartTime) / 60000))
