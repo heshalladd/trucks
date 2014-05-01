@@ -59,8 +59,12 @@ public class Truck {
 	private int messagesCreated = 0;
 	private int messagesSent = 0;
 	private int messagesFailed = 0;
+	private int endToEndSequence = 0;
+	private int endToEndRespSequence = 0;
 	private int malformedMessagesReceived = 0;
 	private long lastMessageMapTime = 0l;
+	private long lastEndToEndSendTime = 0l;
+	private long lastRoundTripTime = 0l;
 	private long lastMessageInterval = 0l;
 	private String lastCreatedMessage = "";
 	private String lastForwardedMessage = "";
@@ -247,6 +251,10 @@ public class Truck {
 		return desiredTruckSimPop;
 	}
 	
+	public int getEndToEndSequence() {
+		return endToEndSequence;
+	}
+	
 	public int getInitializations() {
 		return initializations;
 	}
@@ -257,6 +265,10 @@ public class Truck {
 	
 	public long getLastAIProcessTime() {
 		return lastAIProcessTime;
+	}
+	
+	public long getLastEndToEndSendTime() {
+		return lastEndToEndSendTime;
 	}
 
 	public String getLastForwardedMessage() {
@@ -281,6 +293,10 @@ public class Truck {
 	
 	public String getLastMessageReceived() {
 		return lastMessageReceived;
+	}
+	
+	public long getLastRoundTripTime() {
+		return lastRoundTripTime;
 	}
 
 	public int getMalformedMessagesReceived() {
@@ -389,11 +405,58 @@ public class Truck {
 		// of from updateMental()
 		while (!incomingUDPMessages.isEmpty() && theFA != null) {
 			String messageToProcess = incomingUDPMessages.remove();
+			String[] endToEndCheck = messageToProcess.split(Controller.TERMINATING_STRING)[0].split(",");
+			//check if you have received this end to end message before
+			if(endToEndCheck[0].equals("e2e") && Integer.parseInt(endToEndCheck[1]) > endToEndSequence) {
+				endToEndSequence = Integer.parseInt(endToEndCheck[2]);
+				if(getConvoySize() == desiredTruckSimPop) {
+					//TODO: you are the end, start e2e response
+					endToEndRespSequence = endToEndSequence;
+					String endToEndResp = "e2er,"
+							+ endToEndRespSequence
+							+ Controller.TERMINATING_STRING;
+					for (int i = 0; i < truckPosCache.length; i++) {
+						// roll the dice
+						if ((i + 1) != truckNumber
+								&& isMessageSuccessful(i + 1)) {
+							sendMessage((i + 1), endToEndResp);
+						}
+					}
+				}
+				else {
+					for (int i = 0; i < truckPosCache.length; i++) {
+						// roll the dice
+						if ((i + 1) != truckNumber
+								&& isMessageSuccessful(i + 1)) {
+							sendMessage((i + 1), messageToProcess);
+						}
+					}					
+				}
+				continue;
+			} else if (endToEndCheck[0].equals("e2er") && Integer.parseInt(endToEndCheck[1]) > endToEndRespSequence) {
+				endToEndRespSequence = Integer.parseInt(endToEndCheck[1]);
+				if(probablyFirst) {
+					//its for you
+					if(endToEndRespSequence == endToEndSequence) {
+						lastRoundTripTime = System.nanoTime() - lastEndToEndSendTime;
+					}
+				} else {
+					//not for you. pass it on
+					for (int i = 0; i < truckPosCache.length; i++) {
+						// roll the dice
+						if ((i + 1) != truckNumber
+								&& isMessageSuccessful(i + 1)) {
+							sendMessage((i + 1), messageToProcess);
+						}
+					}
+				}
+				continue;
+			}
 			theFA.handleMessage(messageToProcess, this);
 		}
 
 	}
-
+	
 	public void increaseMalformedMessagesReceived() {
 		malformedMessagesReceived++;
 	}
@@ -498,6 +561,10 @@ public class Truck {
 	public void setDesiredPlaceInConvoy(int desiredPlaceInConvoy) {
 		this.desiredPlaceInConvoy = desiredPlaceInConvoy;
 	}
+	
+	public void setEndToEndSequence(int seqNumber) {
+		this.endToEndSequence = seqNumber;
+	}
 
 	public void setLane(int lane) {
 		this.lane = lane;
@@ -509,6 +576,10 @@ public class Truck {
 
 	public void setLastAIProcessTime(long timeDiff) {
 		this.lastAIProcessTime = timeDiff;
+	}
+	
+	public void setLastEndToEndSendTime(long timeNano) {
+		this.lastEndToEndSendTime = timeNano;
 	}
 	
 	public void setLastCreatedMessage(String message) {
@@ -723,7 +794,7 @@ public class Truck {
 					truckUDPSocket.receive(receivedPacket);
 					// System.out.println("[NORMAL] Received packet:"
 					// + new String(receivedPacket.getData()));
-					//TODO: add a short parse to split end to end packets off to AI
+					// short parse to handle end to end packets
 					String receivedMessage = new String(receivedPacket.getData());
 					incomingUDPMessages
 							.add(receivedMessage);

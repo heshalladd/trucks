@@ -122,6 +122,7 @@ public class TruckDriver {
 								+ controllerAddress);
 				new ControllerRequester(controllerAddress).start();
 				// input for reading requests
+				@SuppressWarnings("resource")
 				DatagramSocket daemonSocket = new DatagramSocket(
 						Controller.DAEMON_PORT);
 
@@ -359,6 +360,7 @@ public class TruckDriver {
 									+ (int)theTruck.getPos() + ","
 									+ theTruck.getConvoyID() + ","
 									+ "Truck Number: " + theTruck.getTruckNumber()
+									+ "     Last End to End Time: " + (theTruck.getLastRoundTripTime() / 2l) + " nanoseconds"
 									+ "\n" + theTruck.getConvoyID()
 									+ "\nOrder: " + theTruck.getOrderInConvoy()
 									+ "||Size: " + theTruck.getConvoySize()
@@ -460,7 +462,6 @@ public class TruckDriver {
 			AIMap.put(4, "FIRST_CONVOY_MEMBER");
 			AIMap.put(5, "NON_FIRST_CONVOY_MEMBER");
 			DecimalFormat df = new DecimalFormat("#0.00");
-			DecimalFormat df2 = new DecimalFormat("#0.000000");
 			boolean debug = false;
 			while (debug) {
 				UITickStart = System.nanoTime();

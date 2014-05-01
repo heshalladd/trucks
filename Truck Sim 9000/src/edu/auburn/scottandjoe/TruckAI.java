@@ -143,7 +143,22 @@ public class TruckAI {
 			break;
 
 		case FIRST_CONVOY_LEADER:
-			// TODO: if convoy is full send end to end message
+			//if full convoy, send end to end message once per second
+			if(fullConvoy && (System.nanoTime() - theTruck.getLastEndToEndSendTime()) > 1000000000.0){
+				theTruck.setLastEndToEndSendTime(System.nanoTime());
+				theTruck.setEndToEndSequence(theTruck.getEndToEndSequence() + 1);
+				String endToEndMessage = "e2e,"
+						+ theTruck.getEndToEndSequence()
+						+ Controller.TERMINATING_STRING;
+				for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
+					// roll the dice
+					if ((i + 1) != theTruck.getTruckNumber()
+							&& theTruck.isMessageSuccessful(i + 1)) {
+						theTruck.sendMessage((i + 1), endToEndMessage);
+						theTruck.setLastCreatedMessage(endToEndMessage);
+					}
+				}
+			}
 			desiredSpeed = STABILIZING_SPEED;
 			break;
 

@@ -433,6 +433,7 @@ public class Controller {
 		public void run() {
 			// input for reading requests
 			try {
+				@SuppressWarnings("resource")
 				DatagramSocket daemonSocket = new DatagramSocket(DAEMON_PORT);
 				while (true) {
 					String receivedMessageWhole = "";
