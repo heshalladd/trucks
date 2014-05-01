@@ -1,5 +1,3 @@
-
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -12,22 +10,27 @@ public class MPRAlgorithm {
 			ArrayList<ArrayList<Integer>> foriegnLists) {
 		HashSet<Integer> candidates = new HashSet<Integer>();
 		for (ArrayList<Integer> list : foriegnLists) {
-			int node = list.remove(0);
-			list.removeAll(localNeighbors);
-			candidates.addAll(list);
-			list.add(node);
+			if (!list.isEmpty()) {
+				int node = list.remove(0);
+				list.removeAll(localNeighbors);
+				candidates.addAll(list);
+				list.add(node);
+			}
 		}
 		Collections.sort(foriegnLists, new CustomComparator());
 		ArrayList<Integer> MPRSet = new ArrayList<Integer>();
 		for (ArrayList<Integer> list : foriegnLists) {
-			int node = list.remove(list.size() - 1);
-			MPRSet.add(node);
-			candidates.removeAll(list);
-			if (candidates.size() == 0)
-				break;
+			if (!list.isEmpty()) {
+				int node = list.remove(list.size() - 1);
+				if (candidates.removeAll(list))
+					MPRSet.add(node);
+				if (candidates.size() == 0)
+					break;
+			}
 		}
 		return MPRSet;
 	}
+
 	public static class CustomComparator implements
 			Comparator<ArrayList<Integer>> {
 		@Override

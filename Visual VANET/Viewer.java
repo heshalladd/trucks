@@ -35,6 +35,7 @@ public class Viewer extends JPanel implements Runnable {
 	BufferedImage mTruckImage = null;
 	BufferedImage mRoadImage = null;
 	BufferedImage mFrogImage = null;
+	BufferedImage mTreeImage = null;
 	boolean radioOn = false;
 	JButton b3;
 	TruckDataList mTruckDataList;
@@ -52,6 +53,7 @@ public class Viewer extends JPanel implements Runnable {
 			mTruckImage = ImageIO.read(new File("images/truck.png"));
 			mRoadImage = ImageIO.read(new File("images/street.png"));
 			mFrogImage = ImageIO.read(new File("images/frogger.png"));
+			mTreeImage = ImageIO.read(new File("images/tree1.png"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -255,7 +257,8 @@ public class Viewer extends JPanel implements Runnable {
 					for (String line : s.split("\n"))
 		            g.drawString(line, 17, yDraw += g.getFontMetrics().getHeight());
 		}
-		
+		g2d.drawImage(mTreeImage, 800, 650, null);
+		g2d.drawImage(mTreeImage, 550, 450, null);
 		b3.repaint();
 
 	}
