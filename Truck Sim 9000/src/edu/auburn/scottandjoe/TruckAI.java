@@ -158,6 +158,9 @@ public class TruckAI {
 			}
 			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < MAX_CONVOY_GAP) {
 				desiredSpeed = STABILIZING_SPEED;
+				if(nextTruckGap > 12) {
+					desiredSpeed = STABILIZING_SPEED + 0.1;
+				}
 			}
 			break;
 

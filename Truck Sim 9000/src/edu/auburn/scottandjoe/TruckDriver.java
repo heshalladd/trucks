@@ -347,6 +347,14 @@ public class TruckDriver {
 						if(((System.nanoTime() - lastVisMessageTime) / 1000000000.0) > (1.0 / (double) Controller.VIS_SEND_RATE)) {
 							DecimalFormat df = new DecimalFormat("#0.00");
 							DecimalFormat df2 = new DecimalFormat("#00");
+							//determine known trucks
+							String knownTrucks = "|| ";
+							for(int i = 0; i < theTruck.getTruckInitialized().length; i++) {
+								if(theTruck.getTruckInitialized()[i]){
+									knownTrucks += (i+1) + " ";
+								}
+							}
+							knownTrucks += "||";
 							String visMessage = "" + theTruck.getTruckNumber() + ","
 									+ (int)theTruck.getPos() + ","
 									+ theTruck.getConvoyID() + ","
@@ -362,12 +370,14 @@ public class TruckDriver {
 									+ "\nCACHING===================="
 									+ "\n||Cache Updates:" + theTruck.getCacheUpdates()
 									+ "||Initializations:" + theTruck.getInitializations()
+									+ "\n" + knownTrucks
 									+ "\nMESSAGES==================="
-									+ "\n||Forwarded:" + theTruck.getMessagesForwarded() 
+									+ "\n||Received:" + theTruck.getMessagesReceived()
+									+ "||Forwarded:" + theTruck.getMessagesForwarded() 
 									+ "||Dropped:" + theTruck.getMessagesDropped() 
-									+ "||Created:" + theTruck.getMessagesCreated() 
+									+ "\n||Created:" + theTruck.getMessagesCreated() 
 									+ "||Sent:" + theTruck.getMessagesSent() 
-									+ "\n||Failed:" + theTruck.getMessagesFailed() 
+									+ "||Failed:" + theTruck.getMessagesFailed() 
 									+ "||Bad:" + theTruck.getMalformedMessagesReceived()
 									+ "\nTIMING====================="
 									+ "\n||AI Tick:" + theTruck.getLastAIProcessTime() + " nanoseconds"

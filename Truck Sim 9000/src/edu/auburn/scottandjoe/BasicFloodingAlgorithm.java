@@ -19,6 +19,7 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 	@Override
 	public void handleMessage(String message, Truck theTruck) {
 		// truncate on character that signifies end of message
+		theTruck.increaseMessagesReceived();
 		String messageTruncated = message.split(TERMINATING_STRING)[0];
 		theTruck.setLastMessageReceived(messageTruncated);
 		String[] messageSplit = messageTruncated.split(",");

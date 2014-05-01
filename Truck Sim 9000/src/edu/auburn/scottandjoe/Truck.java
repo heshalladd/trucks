@@ -53,6 +53,7 @@ public class Truck {
 
 	// message meta
 	private int sequenceNumber = 1;
+	private int messagesReceived = 0;
 	private int messagesForwarded = 0;
 	private int messagesDropped = 0;
 	private int messagesCreated = 0;
@@ -301,6 +302,10 @@ public class Truck {
 	public int getMessagesForwarded() {
 		return messagesForwarded;
 	}
+	
+	public int getMessagesReceived() {
+		return messagesReceived;
+	}
 
 	public int getMessagesSent() {
 		return messagesSent;
@@ -407,6 +412,10 @@ public class Truck {
 
 	public void increaseMessagesForwarded() {
 		messagesForwarded++;
+	}
+	
+	public void increaseMessagesReceived() {
+		messagesReceived++;
 	}
 
 	public void increaseMessagesSent() {

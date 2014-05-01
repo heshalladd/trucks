@@ -12,7 +12,7 @@ import java.util.Scanner;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class Controller {
-	public static final int TICK_RATE = 120;
+	public static final int TICK_RATE = 100;
 	public static final int VIS_SEND_RATE = 100;
 	public static final int TRUCK_PORT = 10125;
 	public static final int DAEMON_PORT = 10126;
@@ -184,6 +184,7 @@ public class Controller {
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
+				System.out.println("[SEVERE] IO Exception for Truck " + truckNumber);
 				e.printStackTrace();
 			}
 		}
@@ -315,12 +316,11 @@ public class Controller {
 					Arrays.fill(truckPosCache, 0.0);
 					if((System.currentTimeMillis() - lastStartTime) < 10000) {
 						System.out
-								.println("[WARNING] There was a collision. Attempting to start new simulation.");
+								.println("[WARNING] There was a collision while stabilizing. Attempting to start new simulation.");
 						waitAndStart();
 					} else {
-						System.out
-								.println("[UIH] There was a collision. Type \"start\" to restart the simulation.");
 						waitForStartFromUser();
+						System.out.println("[UIH] Type \"start\" to restart the simulation.");
 					}
 					
 					lastStartTime = System.currentTimeMillis();
@@ -369,12 +369,21 @@ public class Controller {
 						}
 					}
 
-					Thread.sleep(20);
+					Thread.sleep(50);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
 				if((System.currentTimeMillis() - simulationStartTime)/1000 >= 300) {
 					System.out.println("[NORMAL] Simulation ended (5 minute timer)");
+					for (int i = 0; i < requests.length; i++) {
+						try {
+							requests[i].put("" + (i + 1) + "," + REQUEST + ","
+									+ END_SIM + TERMINATING_STRING);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
 					break;
 				}
 			}
