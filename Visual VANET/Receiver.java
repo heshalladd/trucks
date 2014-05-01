@@ -28,7 +28,7 @@ public class Receiver {
 						receiveData.length);
 				serverSocket.receive(receivePacket);
 				String data = new String(receivePacket.getData());
-				data+="THIS_IS_THE_END";
+				data+="~";
 				StringTokenizer tokenizer = new StringTokenizer(data, ",");
 				number = Integer.parseInt(tokenizer.nextToken());
 				locationX = Integer.parseInt(tokenizer.nextToken());
@@ -36,7 +36,7 @@ public class Receiver {
 				if(!platoonIdMap.containsKey(platoonId)){
 					platoonIdMap.put(platoonId, mTruckDataList.getRandomColor());
 				}
-				information = tokenizer.nextToken("THIS_IS_THE_END");
+				information = tokenizer.nextToken("~");
 				mTruckDataList.truckDataList.get(number).updateData(number,
 						locationX, platoonId, information);
 				receiveData = new byte[1024];

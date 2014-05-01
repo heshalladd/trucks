@@ -416,7 +416,7 @@ public class TruckDriver {
 									+ theTruck.getInitializations()
 									+ "\n"
 									+ knownTrucks
-									+ "\nMESSAGES===================" + theTruck.getLastMessageReceived()
+									+ "\nMESSAGES==================="
 									+ messagesOutput
 									+ "\nTIMING====================="
 									+ "\nAI Tick:"

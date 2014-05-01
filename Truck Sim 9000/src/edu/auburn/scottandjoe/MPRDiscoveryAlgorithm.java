@@ -49,12 +49,11 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 		String messageTruncated = message.split(TERMINATING_STRING)[0];
 		if ((Math.abs(System.nanoTime() - lastDebugMessageTime) / 1000000000.0) > (1.0 / (double) DEBUG_RATE)) {
 			lastDebugMessageTime = System.nanoTime();
-			theTruck.setLastMessageReceived(message);
+			theTruck.setLastMessageReceived(messageTruncated);
 		}
-		String messageType = messageTruncated.substring(0, 13);
+		String messageType = messageTruncated.substring(0, 14);
 		messageTruncated = messageTruncated.substring(14,
-				messageTruncated.length() - 1);
-		theTruck.setLastMessageReceived(messageTruncated);
+				messageTruncated.length());
 
 		if (messageType.equals("MSG_TYPE_FLOOD")) {
 			String[] messageSplit = messageTruncated.split(",");
@@ -150,10 +149,12 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 			// split everything
 			String[] messageSplit = messageTruncated.split(",");
 
+			int helloMessageSequenceNumber = Integer.parseInt(messageSplit[0]);
+			
 			// first element is who it is from (i.e. in this case it is from
 			// truck #6)
-			int receivedFrom = Integer.parseInt(messageSplit[0]);
-
+			int receivedFrom = Integer.parseInt(messageSplit[1]);
+			
 			// neighbor table uses first element to specify who this
 			// neighborList belongs too (i.e. 6)
 			neighborList.add(receivedFrom);
@@ -173,7 +174,7 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 			// it should forward packets received from the transmitter.
 			i++;
 			ArrayList<Integer> receivedMPRRequests = new ArrayList<Integer>();
-			while (messageSplit[i] != TERMINATING_STRING) {
+			while (messageSplit.length > i) {
 				receivedMPRRequests.add(Integer.parseInt(messageSplit[i]));
 				i++;
 			}
@@ -223,8 +224,8 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 		String message = "" + "MSG_TYPE_HELLO"
 				// 0 - sequence number
 				+ mSequenceNumberCache[theTruck.getTruckNumber() - 1] + ","
-				+ theTruck.getTruckNumber() + "," + getOneHopList(theTruck) //notice no comma
-				+ "-1";
+				+ theTruck.getTruckNumber() + getOneHopList(theTruck) + ","
+				+ "-1" + ",";
 
 		if (mMPRs.size() > 0) {
 			for (int i = 0; i < mMPRs.size(); i++) {
@@ -244,7 +245,7 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 					&& theTruck.getPos() + 100 > theTruck.getTruckPosCache()[i]
 					&& theTruck.getPos() - 100 < theTruck.getTruckPosCache()[i]) {
 				int truckNumber = i + 1;
-				oneHopNeighbors.append("" + truckNumber + ",");
+				oneHopNeighbors.append("," + truckNumber);
 			}
 		}
 		return oneHopNeighbors.toString();
