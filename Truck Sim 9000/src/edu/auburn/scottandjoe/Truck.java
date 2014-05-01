@@ -24,7 +24,7 @@ public class Truck {
 	public static final int MAX_LANE = 1;
 	public static final int MIN_LANE = 1;
 	public static final double TRUCK_LENGTH = 25.0;
-	public static final double MAX_INITIAL_POS = 1000;
+	public static final double MAX_INITIAL_POS = 700;
 
 	// 80mph is 35.7m/s
 	public static final double MAX_REASONABLE_SPEED = 35.7;
