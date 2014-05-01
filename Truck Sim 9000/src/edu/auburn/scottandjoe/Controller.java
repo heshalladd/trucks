@@ -332,7 +332,7 @@ public class Controller {
 		
 		private void waitAndStart() {
 			try {
-				Thread.sleep(500);
+				Thread.sleep(15);
 			} catch (InterruptedException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();

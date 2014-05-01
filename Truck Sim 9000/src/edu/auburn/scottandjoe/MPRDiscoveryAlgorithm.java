@@ -7,11 +7,20 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 	// constants
 	// maximum created messages per second
 	private final int MESSAGES_PER_SECOND = 110;
+	// updates per second
+	private static final int MPR_SELECTOR_TABLE_RATE = 1;
+	//
+	private static final int SEND_HELLO_RATE = 10;
+	
+	//debug rate
+	private static final int DEBUG_RATE = 1;
+	private long lastDebugMessageTime = 0l;
 	// magical terminating character (should never show up in
 	// normal use anywhere in the message)
 	private final String TERMINATING_STRING = Controller.TERMINATING_STRING;
 
 	private long lastMessageTime = 0l;
+	private long lastHelloMessageTime = 0l;
 
 	private ArrayList<ArrayList<Integer>> mNeighborTable;
 	private int[] mSequenceNumberCache;
@@ -19,8 +28,6 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 	private ArrayList<Integer> mMPRs;
 
 	// member constant
-	// updates per second
-	private static final int MPR_SELECTOR_TABLE_RATE = 1;
 
 	// member variable
 	private long lastMPRCalcTime = 0l;
@@ -40,6 +47,10 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 	public void handleMessage(String message, Truck theTruck) {
 		// truncate on character that signifies end of message
 		String messageTruncated = message.split(TERMINATING_STRING)[0];
+		if ((Math.abs(System.nanoTime() - lastDebugMessageTime) / 1000000000.0) > (1.0 / (double) DEBUG_RATE)) {
+			lastDebugMessageTime = System.nanoTime();
+			theTruck.setLastMessageReceived(message);
+		}
 		String messageType = messageTruncated.substring(0, 13);
 		messageTruncated = messageTruncated.substring(14,
 				messageTruncated.length() - 1);
@@ -80,8 +91,6 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 				try {
 					theTruck.updateCache(messageMap, messageTruckNumber);
 				} catch (NumberFormatException e) {
-					e.printStackTrace();
-				} catch (FatalTruckException e) {
 					e.printStackTrace();
 				}
 				// check if not first place
@@ -213,7 +222,7 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 		// indexes marked after lines
 		String message = "" + "MSG_TYPE_HELLO"
 				// 0 - sequence number
-				+ mSequenceNumberCache[theTruck.getTruckNumber()] + ","
+				+ mSequenceNumberCache[theTruck.getTruckNumber() - 1] + ","
 				+ theTruck.getTruckNumber() + "," + getOneHopList(theTruck) //notice no comma
 				+ "-1";
 
@@ -223,7 +232,7 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 			}
 		}
 		message += TERMINATING_STRING;
-		mSequenceNumberCache[theTruck.getTruckNumber()]++;
+		mSequenceNumberCache[theTruck.getTruckNumber() - 1]++;
 		return message;
 	}
 
@@ -295,6 +304,22 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 				lastMPRCalcTime = theTime2;
 			}
 
+		}
+		//check if it is time to send a hello message
+		if(((System.nanoTime() - lastHelloMessageTime) / 1000000000.0) > (.0 / (double) SEND_HELLO_RATE)){
+			lastHelloMessageTime = System.nanoTime();
+			String newHelloMessage = createHelloMessage(theTruck);
+			theTruck.increaseHelloMessagesCreated();
+			
+			for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
+				// roll the dice
+				if ((i + 1) != theTruck.getTruckNumber()
+						&& theTruck.isMessageSuccessful(i + 1)) {
+					theTruck.sendMessage((i + 1), newHelloMessage);
+					theTruck.increaseHelloMessagesSent();
+					theTruck.setLastCreatedMessage(newHelloMessage);
+				}
+			}
 		}
 	}
 

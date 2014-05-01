@@ -52,8 +52,6 @@ public class BasicFloodingAlgorithm implements FloodingAlgorithm {
 				theTruck.updateCache(messageMap, messageTruckNumber);
 			} catch (NumberFormatException e) {
 				e.printStackTrace();
-			} catch (FatalTruckException e) {
-				e.printStackTrace();
 			}
 			// check if not first place
 			if (theTruck.getPos() < Double.parseDouble(messageSplit[5])) {

@@ -57,8 +57,8 @@ public class TruckDriver {
 		initTruckNumber = Integer.decode(args[2]);
 		System.out.println("[NORMAL] Truck Number set to " + initTruckNumber);
 		initLane = Truck.RANDOMIZE_INT;
-		//TEST
-		if(Integer.parseInt(args[3]) == -1) {
+		// TEST
+		if (Integer.parseInt(args[3]) == -1) {
 			initPos = Truck.RANDOMIZE_DOUBLE;
 		} else {
 			initPos = Double.parseDouble(args[3]);
@@ -163,7 +163,8 @@ public class TruckDriver {
 								floodingAlgorithm = new BasicFloodingAlgorithm();
 							} else if (floodingAlgorithmType == 2) {
 								// set to the MPR FA
-								floodingAlgorithm = new MPRDiscoveryAlgorithm(desiredTruckSimPop);
+								floodingAlgorithm = new MPRDiscoveryAlgorithm(
+										desiredTruckSimPop);
 							}
 							theTruck = new Truck(initTruckNumber, initLane,
 									initPos, initSpeed, initAcceleration,
@@ -204,7 +205,9 @@ public class TruckDriver {
 								receivedPosCache[i] = Double
 										.parseDouble(receivedMessage[i + 3]);
 							}
-							theTruck.setTruckPosCache(receivedPosCache);
+							if(initialized) {
+								theTruck.setTruckPosCache(receivedPosCache);
+							}
 							break;
 						case Controller.ADDR_CACHE:
 							String[] receivedAddresses = new String[desiredTruckSimPop];
@@ -332,68 +335,114 @@ public class TruckDriver {
 			// computation time
 			// in order to better fine tune the tick rate as low as possible
 			while (true) {
-				try {
-					while (!running) {
-						try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
 
-					// while loop to do tick limited truck updates
-					long lastVisMessageTime = 0l;
-					long simulationStartTime = System.currentTimeMillis();
-					while (running && initialized) {
+				while (!running) {
+					try {
+						Thread.sleep(100);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+
+				// while loop to do tick limited truck updates
+				long lastVisMessageTime = 0l;
+				long simulationStartTime = System.currentTimeMillis();
+				while (running && initialized) {
+					try {
 						long theTime = System.nanoTime();
-						if(((System.nanoTime() - lastVisMessageTime) / 1000000000.0) > (1.0 / (double) Controller.VIS_SEND_RATE)) {
+						if (((System.nanoTime() - lastVisMessageTime) / 1000000000.0) > (1.0 / (double) Controller.VIS_SEND_RATE)) {
 							DecimalFormat df = new DecimalFormat("#0.00");
 							DecimalFormat df2 = new DecimalFormat("#00");
-							//determine known trucks
+							// determine known trucks
 							String knownTrucks = "|| ";
-							for(int i = 0; i < theTruck.getTruckInitialized().length; i++) {
-								if(theTruck.getTruckInitialized()[i]){
-									knownTrucks += (i+1) + " ";
+							for (int i = 0; i < theTruck.getTruckInitialized().length; i++) {
+								if (theTruck.getTruckInitialized()[i]) {
+									knownTrucks += (i + 1) + " ";
 								}
 							}
 							knownTrucks += "||";
-							String visMessage = "" + theTruck.getTruckNumber() + ","
-									+ (int)theTruck.getPos() + ","
-									+ theTruck.getConvoyID() + ","
-									+ "Truck Number: " + theTruck.getTruckNumber()
-									+ "     Last End to End Time: " + (theTruck.getLastRoundTripTime() / 2l) + " nanoseconds"
-									+ "\n" + theTruck.getConvoyID()
-									+ "\nOrder: " + theTruck.getOrderInConvoy()
-									+ " || Size: " + theTruck.getConvoySize()
-									+ " || Position: " + (int)theTruck.getPos()
-									+ " || Next Truck Gap: " + (int)(theTruck.getNextTruckPos() -  theTruck.getPos() - Truck.TRUCK_LENGTH)
-									+ "\nSpeed: " + df.format((theTruck.getSpeed()*2.23694)) + "mph"
-									+ " || Acceleration: " + df.format(theTruck.getAcceleration())
-									+ "\nAIState: " + AIMap.get(theTruck.getTruckAIState())
+							String messagesOutput = "\nReceived:"
+									+ theTruck.getMessagesReceived()
+									+ " || Forwarded:"
+									+ theTruck.getMessagesForwarded()
+									+ " || Dropped:"
+									+ theTruck.getMessagesDropped()
+									+ "\nCreated:"
+									+ theTruck.getMessagesCreated()
+									+ " || Sent:" + theTruck.getMessagesSent()
+									+ " || Failed:"
+									+ theTruck.getMessagesFailed() + " || Bad:"
+									+ theTruck.getMalformedMessagesReceived();
+							if (theTruck.getFAType() == 2) {
+								messagesOutput += "\nHello Created:"
+										+ theTruck.getHelloMessagesCreated()
+										+ " || Hello Sent:"
+										+ theTruck.getHelloMessagesSent();
+							}
+							String visMessage = ""
+									+ theTruck.getTruckNumber()
+									+ ","
+									+ (int) theTruck.getPos()
+									+ ","
+									+ theTruck.getConvoyID()
+									+ ","
+									+ "Truck Number: "
+									+ theTruck.getTruckNumber()
+									+ "     Last End to End Time: "
+									+ (theTruck.getLastRoundTripTime() / 2l)
+									+ " nanoseconds"
+									+ "\n"
+									+ theTruck.getConvoyID()
+									+ "\nOrder: "
+									+ theTruck.getOrderInConvoy()
+									+ " || Size: "
+									+ theTruck.getConvoySize()
+									+ " || Position: "
+									+ (int) theTruck.getPos()
+									+ " || Next Truck Gap: "
+									+ (int) (theTruck.getNextTruckPos()
+											- theTruck.getPos() - Truck.TRUCK_LENGTH)
+									+ "\nSpeed: "
+									+ df.format((theTruck.getSpeed() * 2.23694))
+									+ "mph"
+									+ " || Acceleration: "
+									+ df.format(theTruck.getAcceleration())
+									+ "\nAIState: "
+									+ AIMap.get(theTruck.getTruckAIState())
 									+ "\nCACHING===================="
-									+ "\nCache Updates:" + theTruck.getCacheUpdates()
-									+ " || Initializations:" + theTruck.getInitializations()
-									+ "\n" + knownTrucks
-									+ "\nMESSAGES==================="
-									+ "\nReceived:" + theTruck.getMessagesReceived()
-									+ " || Forwarded:" + theTruck.getMessagesForwarded() 
-									+ " || Dropped:" + theTruck.getMessagesDropped() 
-									+ "\nCreated:" + theTruck.getMessagesCreated() 
-									+ " || Sent:" + theTruck.getMessagesSent() 
-									+ " || Failed:" + theTruck.getMessagesFailed() 
-									+ " || Bad:" + theTruck.getMalformedMessagesReceived()
+									+ "\nCache Updates:"
+									+ theTruck.getCacheUpdates()
+									+ " || Initializations:"
+									+ theTruck.getInitializations()
+									+ "\n"
+									+ knownTrucks
+									+ "\nMESSAGES===================" + theTruck.getLastMessageReceived()
+									+ messagesOutput
 									+ "\nTIMING====================="
-									+ "\nAI Tick:" + theTruck.getLastAIProcessTime() + " nanoseconds"
-									+ "\nNew Msg Interval:" + theTruck.getLastMessageInterval() + " nanoseconds"
-									+ "\nWhole Tick:" + lastTickTime + " nanoseconds"
-									+ "\nWhole Tick Interval:" + lastTickInterval + " nanoseconds"
+									+ "\nAI Tick:"
+									+ theTruck.getLastAIProcessTime()
+									+ " nanoseconds"
+									+ "\nNew Msg Interval:"
+									+ theTruck.getLastMessageInterval()
+									+ " nanoseconds"
+									+ "\nWhole Tick:"
+									+ lastTickTime
+									+ " nanoseconds"
+									+ "\nWhole Tick Interval:"
+									+ lastTickInterval
+									+ " nanoseconds"
 									+ "\nRUNNING TIME================"
-									+ "\n" + df2.format(((System.currentTimeMillis() - simulationStartTime) / 60000))
-									+ ":" + df2.format((((System.currentTimeMillis() - simulationStartTime) / 1000) % 60))
+									+ "\n"
+									+ df2.format(((System.currentTimeMillis() - simulationStartTime) / 60000))
+									+ ":"
+									+ df2.format((((System.currentTimeMillis() - simulationStartTime) / 1000) % 60))
 									+ TERMINATING_STRING;
 							sendVisMessage(visMessage);
 							lastVisMessageTime = System.nanoTime();
-							//System.out.print("[DEBUG] VIS ADDR:" + visualizerAddress + "||VIS PORT:" + Controller.VISUALIZER_PORT + "||VIS MSG:" + visMessage);
+							// System.out.print("[DEBUG] VIS ADDR:" +
+							// visualizerAddress + "||VIS PORT:" +
+							// Controller.VISUALIZER_PORT + "||VIS MSG:" +
+							// visMessage);
 						}
 						lastTickInterval = (theTime - tickStart);
 						tickStart = theTime;
@@ -406,24 +455,26 @@ public class TruckDriver {
 						lastTickTime = (tickEnd - tickStart);
 						while (((System.nanoTime() - tickStart) / 1000000000.0) < (1.0 / (double) TICK_RATE)) {
 						}
-					}
-					if (!running) {
-						System.out
-								.println("[NORMAL] Waiting for start command.");
-					}
-					try {
-						Thread.sleep(100);
+
+					} catch (FatalTruckException e) {
+						// TODO: handle
+						e.printStackTrace();
 					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-				} catch (FatalTruckException e) {
-					// TODO: handle
+				}
+				if (!running) {
+					System.out.println("[NORMAL] Waiting for start command.");
+				}
+				try {
+					Thread.sleep(100);
 				} catch (InterruptedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
 		}
+
 		private void sendVisMessage(String message) {
 			byte[] outBoundPacketBuf = new byte[4096];
 			outBoundPacketBuf = message.getBytes();
@@ -491,46 +542,50 @@ public class TruckDriver {
 					});
 
 					System.out.print("Known Trucks");
-					for(int i = 0; i < theTruck.getTruckInitialized().length; i++) {
-						if(theTruck.getTruckInitialized()[i]) {
-							System.out.print("||" + (i+1) + ":" + df.format(theTruck.getTruckCache()[i].getPos()));
+					for (int i = 0; i < theTruck.getTruckInitialized().length; i++) {
+						if (theTruck.getTruckInitialized()[i]) {
+							System.out.print("||"
+									+ (i + 1)
+									+ ":"
+									+ df.format(theTruck.getTruckCache()[i]
+											.getPos()));
 						}
 					}
 					System.out.println();
 					System.out.print("Pos Cache for Messaging");
 					double[] posCache = theTruck.getTruckPosCache();
 					for (int i = 0; i < posCache.length; i++) {
-						System.out.print("||" + (int)posCache[i]);
+						System.out.print("||" + (int) posCache[i]);
 					}
 
 					System.out.print("Last Message sent:"
 							+ theTruck.getLastCreatedMessage());
 					System.out.println("Last Message Recd:"
 							+ theTruck.getLastMessageReceived());
-					
+
 					System.out.println("ROAD VIEW==================");
 					// Print RoadView
-					 System.out
-					 .println("_______________________________________________________");
-					 for (Truck truck : truckList) {
-					 System.out.print("-[" + truck.getTruckNumber() + ":"
-					 + df.format(truck.getPos()) + "]-");
-					 }
-					 System.out.println();
-					 System.out
-					 .println("_______________________________________________________");
-					
-					//Display truck info (position, speed, acceleration, lane,
-					//total messages)
 					System.out
-					.println("TRUCK     POS            SPEED      ACC      LANE");
+							.println("_______________________________________________________");
 					for (Truck truck : truckList) {
-					System.out.println("  " + truck.getTruckNumber()
-					+ "       " + df.format(truck.getPos())
-					+ "        " + df.format(truck.getSpeed())
-					+ "       "
-					+ df.format(truck.getAcceleration())
-					+ "        " + truck.getLane());
+						System.out.print("-[" + truck.getTruckNumber() + ":"
+								+ df.format(truck.getPos()) + "]-");
+					}
+					System.out.println();
+					System.out
+							.println("_______________________________________________________");
+
+					// Display truck info (position, speed, acceleration, lane,
+					// total messages)
+					System.out
+							.println("TRUCK     POS            SPEED      ACC      LANE");
+					for (Truck truck : truckList) {
+						System.out.println("  " + truck.getTruckNumber()
+								+ "       " + df.format(truck.getPos())
+								+ "        " + df.format(truck.getSpeed())
+								+ "       "
+								+ df.format(truck.getAcceleration())
+								+ "        " + truck.getLane());
 					}
 				} else {
 					try {

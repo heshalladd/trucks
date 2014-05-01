@@ -53,6 +53,8 @@ public class Truck {
 
 	// message meta
 	private int sequenceNumber = 1;
+	private int helloMessagesSent = 0;
+	private int helloMessagesCreated = 0;
 	private int messagesReceived = 0;
 	private int messagesForwarded = 0;
 	private int messagesDropped = 0;
@@ -253,6 +255,24 @@ public class Truck {
 	
 	public int getEndToEndSequence() {
 		return endToEndSequence;
+	}
+	
+	public int getFAType() {
+		if(theFA instanceof BasicFloodingAlgorithm){
+			return 1;
+		}
+		if(theFA instanceof MPRDiscoveryAlgorithm){
+			return 2;
+		}
+		return 0;
+	}
+	
+	public int getHelloMessagesCreated() {
+		return helloMessagesCreated;
+	}
+	
+	public int getHelloMessagesSent() {
+		return helloMessagesSent;
 	}
 	
 	public int getInitializations() {
@@ -457,6 +477,14 @@ public class Truck {
 
 	}
 	
+	public void increaseHelloMessagesCreated() {
+		helloMessagesCreated++;
+	}
+	
+	public void increaseHelloMessagesSent() {
+		helloMessagesSent++;
+	}
+	
 	public void increaseMalformedMessagesReceived() {
 		malformedMessagesReceived++;
 	}
@@ -653,8 +681,7 @@ public class Truck {
 
 	// NOTE: This does not check if the sequence number is new.
 	public void updateCache(HashMap<MessageKeys, String> messageMap,
-			int messageTruckNumber) throws NumberFormatException,
-			FatalTruckException {
+			int messageTruckNumber) {
 		cacheUpdates++;
 		lastMessageMap = messageMap;
 		lastMessageMapTime = System.currentTimeMillis();
@@ -671,9 +698,15 @@ public class Truck {
 					.get(MessageKeys.ACCELERATION));
 
 			// initialize truck for cache
-			truckCache[truckIndex] = new Truck(messageTruckNumber, lane,
-					position, speed, acceleration, null, desiredTruckSimPop);
-			truckInitialized[truckIndex] = true;
+			try {
+				truckCache[truckIndex] = new Truck(messageTruckNumber, lane,
+						position, speed, acceleration, null, desiredTruckSimPop);
+				truckInitialized[truckIndex] = true;
+			} catch (FatalTruckException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
 		}
 		Iterator<MessageKeys> mapIterator = messageMap.keySet().iterator();
 		while (mapIterator.hasNext()) {
@@ -725,7 +758,7 @@ public class Truck {
 		}
 	}
 
-	public void updateMental() throws FatalTruckException {
+	public void updateMental() throws NumberFormatException, FatalTruckException {
 		handleMessages();
 		theFA.doExtra(this);
 		// call the truck AI class
