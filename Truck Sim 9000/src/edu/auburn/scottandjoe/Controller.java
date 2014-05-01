@@ -337,6 +337,7 @@ public class Controller {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
+			Arrays.fill(truckPosCache, 0.0);
 			for (int i = 0; i < requests.length; i++) {
 				try {
 					requests[i].put("" + (i + 1) + "," + REQUEST + ","
@@ -361,6 +362,7 @@ public class Controller {
 							requests[i].put("" + (i + 1) + "," + REQUEST + ","
 									+ END_SIM + TERMINATING_STRING);
 						}
+						Arrays.fill(truckPosCache, 0.0);
 						break;
 					} else {
 						for (int i = 0; i < requests.length; i++) {
@@ -394,6 +396,7 @@ public class Controller {
 				while (true) {
 					userInput = scanner.nextLine();
 					if (userInput.equals("start")) {
+						Arrays.fill(truckPosCache, 0.0);
 						for (int i = 0; i < requests.length; i++) {
 							requests[i].put("" + (i + 1) + "," + REQUEST + ","
 									+ START_SIM + "," + desiredTruckSimPop

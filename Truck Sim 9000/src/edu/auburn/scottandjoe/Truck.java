@@ -471,8 +471,9 @@ public class Truck {
 					}
 				}
 				continue;
+			} else {
+				theFA.handleMessage(messageToProcess, this);
 			}
-			theFA.handleMessage(messageToProcess, this);
 		}
 
 	}
