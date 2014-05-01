@@ -162,7 +162,8 @@ public class TruckDriver {
 							if (floodingAlgorithmType == 1) {
 								floodingAlgorithm = new BasicFloodingAlgorithm();
 							} else if (floodingAlgorithmType == 2) {
-								// TODO: set to the MPR FA
+								// set to the MPR FA
+								floodingAlgorithm = new MPRDiscoveryAlgorithm();
 							}
 							theTruck = new Truck(initTruckNumber, initLane,
 									initPos, initSpeed, initAcceleration,
@@ -363,29 +364,29 @@ public class TruckDriver {
 									+ "     Last End to End Time: " + (theTruck.getLastRoundTripTime() / 2l) + " nanoseconds"
 									+ "\n" + theTruck.getConvoyID()
 									+ "\nOrder: " + theTruck.getOrderInConvoy()
-									+ "||Size: " + theTruck.getConvoySize()
-									+ "||Position: " + (int)theTruck.getPos()
-									+ "||Next Truck Gap: " + (int)(theTruck.getNextTruckPos() -  theTruck.getPos() - Truck.TRUCK_LENGTH)
+									+ " || Size: " + theTruck.getConvoySize()
+									+ " || Position: " + (int)theTruck.getPos()
+									+ " || Next Truck Gap: " + (int)(theTruck.getNextTruckPos() -  theTruck.getPos() - Truck.TRUCK_LENGTH)
 									+ "\nSpeed: " + df.format((theTruck.getSpeed()*2.23694)) + "mph"
-									+ "||Acceleration: " + df.format(theTruck.getAcceleration())
+									+ " || Acceleration: " + df.format(theTruck.getAcceleration())
 									+ "\nAIState: " + AIMap.get(theTruck.getTruckAIState())
 									+ "\nCACHING===================="
-									+ "\n||Cache Updates:" + theTruck.getCacheUpdates()
-									+ "||Initializations:" + theTruck.getInitializations()
+									+ "\nCache Updates:" + theTruck.getCacheUpdates()
+									+ " || Initializations:" + theTruck.getInitializations()
 									+ "\n" + knownTrucks
 									+ "\nMESSAGES==================="
-									+ "\n||Received:" + theTruck.getMessagesReceived()
-									+ "||Forwarded:" + theTruck.getMessagesForwarded() 
-									+ "||Dropped:" + theTruck.getMessagesDropped() 
-									+ "\n||Created:" + theTruck.getMessagesCreated() 
-									+ "||Sent:" + theTruck.getMessagesSent() 
-									+ "||Failed:" + theTruck.getMessagesFailed() 
-									+ "||Bad:" + theTruck.getMalformedMessagesReceived()
+									+ "\nReceived:" + theTruck.getMessagesReceived()
+									+ " || Forwarded:" + theTruck.getMessagesForwarded() 
+									+ " || Dropped:" + theTruck.getMessagesDropped() 
+									+ "\nCreated:" + theTruck.getMessagesCreated() 
+									+ " || Sent:" + theTruck.getMessagesSent() 
+									+ " || Failed:" + theTruck.getMessagesFailed() 
+									+ " || Bad:" + theTruck.getMalformedMessagesReceived()
 									+ "\nTIMING====================="
-									+ "\n||AI Tick:" + theTruck.getLastAIProcessTime() + " nanoseconds"
-									+ "\n||New Msg Interval:" + theTruck.getLastMessageInterval() + " nanoseconds"
-									+ "\n||Whole Tick:" + lastTickTime + " nanoseconds"
-									+ "\n||Whole Tick Interval:" + lastTickInterval + " nanoseconds"
+									+ "\nAI Tick:" + theTruck.getLastAIProcessTime() + " nanoseconds"
+									+ "\nNew Msg Interval:" + theTruck.getLastMessageInterval() + " nanoseconds"
+									+ "\nWhole Tick:" + lastTickTime + " nanoseconds"
+									+ "\nWhole Tick Interval:" + lastTickInterval + " nanoseconds"
 									+ "\nRUNNING TIME================"
 									+ "\n" + df2.format(((System.currentTimeMillis() - simulationStartTime) / 60000))
 									+ ":" + df2.format((((System.currentTimeMillis() - simulationStartTime) / 1000) % 60))

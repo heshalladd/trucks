@@ -147,6 +147,7 @@ public class TruckAI {
 			if(fullConvoy && (System.nanoTime() - theTruck.getLastEndToEndSendTime()) > 1000000000.0){
 				theTruck.setLastEndToEndSendTime(System.nanoTime());
 				theTruck.setEndToEndSequence(theTruck.getEndToEndSequence() + 1);
+				System.out.println("[NORMAL] Sending end to end packet.");
 				String endToEndMessage = "e2e,"
 						+ theTruck.getEndToEndSequence()
 						+ Controller.TERMINATING_STRING;
