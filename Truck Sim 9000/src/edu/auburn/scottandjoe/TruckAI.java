@@ -143,8 +143,9 @@ public class TruckAI {
 			break;
 
 		case FIRST_CONVOY_LEADER:
-			//if full convoy, send end to end message once per second
-			if(fullConvoy && (System.nanoTime() - theTruck.getLastEndToEndSendTime()) > 1000000000.0){
+			// if full convoy, send end to end message once per second
+			if (fullConvoy
+					&& (System.nanoTime() - theTruck.getLastEndToEndSendTime()) > 1000000000.0) {
 				theTruck.setLastEndToEndSendTime(System.nanoTime());
 				theTruck.setEndToEndSequence(theTruck.getEndToEndSequence() + 1);
 				System.out.println("[NORMAL] Sending end to end packet.");
@@ -174,7 +175,7 @@ public class TruckAI {
 			}
 			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < MAX_CONVOY_GAP) {
 				desiredSpeed = STABILIZING_SPEED;
-				if(nextTruckGap > 15) {
+				if (nextTruckGap > 15) {
 					desiredSpeed = STABILIZING_SPEED + 0.1;
 				}
 			}
@@ -190,21 +191,21 @@ public class TruckAI {
 			if (nextTruckGap > MAX_CONVOY_GAP && nextTruckGap < 100.0) {
 				desiredSpeed = CATCHING_SPEED;
 			}
-			//if in sweetspot
+			// if in sweetspot
 			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < MAX_CONVOY_GAP) {
-				if(nextTruck != null) {
+				if (nextTruck != null) {
 					desiredSpeed = nextTruck.getSpeed();
 				} else {
-				desiredSpeed = STABILIZING_SPEED;
+					desiredSpeed = STABILIZING_SPEED;
 				}
 			}
-			
+
 			// if gap is substantial, drive really fast
 			if (nextTruckGap > 100) {
 				desiredSpeed = MAX_REASONABLE_SPEED;
 			}
-			
-			//check if truck has become part of 1st convoy
+
+			// check if truck has become part of 1st convoy
 			for (int i = 0; i < truckInitialized.length; i++) {
 				// check for not self, initialized, same convoy, and if first
 				if ((i + 1) != theTruck.getTruckNumber()
@@ -216,9 +217,9 @@ public class TruckAI {
 					break;
 				}
 			}
-			//TODO: can't find why truck 2 isn't getting updates from truck 1
-			//here is a quick fix
-			if(fullConvoy) {
+			// TODO: can't find why truck 2 isn't getting updates from truck 1
+			// here is a quick fix
+			if (fullConvoy) {
 				truckAIState = FIRST_CONVOY_MEMBER;
 			}
 			break;
@@ -227,13 +228,14 @@ public class TruckAI {
 			break;
 		}
 		// adopt convoy id of nearest truck in front of you
-		if (nextTruck != null && !nextTruck.getConvoyID().equals(theTruck.getConvoyID())) {
+		if (nextTruck != null
+				&& !nextTruck.getConvoyID().equals(theTruck.getConvoyID())) {
 			theTruck.setConvoyID(nextTruck.getConvoyID());
 		}
 
 		// adopt (place in convoy + 1) of nearest truck in front of you
 		if (nextTruck != null) {
-			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy()+1);
+			theTruck.setOrderInConvoy(nextTruck.getOrderInConvoy() + 1);
 		}
 
 		// become leader if leader left
@@ -254,19 +256,19 @@ public class TruckAI {
 				leaderExists = true;
 			}
 		}
-		if(!leaderExists) {
+		if (!leaderExists) {
 			theTruck.setOrderInConvoy(1);
 		}
 
 		// if convoy size is the same as the simulation population, become full
-		if(theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
+		if (theTruck.getConvoySize() == theTruck.getDesiredTruckSimPop()) {
 			fullConvoy = true;
 		}
 
 		// logic to try to make truck its desired speed by modifying
 		// acceleration
 		if (theTruck.getSpeed() < desiredSpeed) {
-			if (theTruck.getAcceleration() < MAX_ACCELERATION -0.1) {
+			if (theTruck.getAcceleration() < MAX_ACCELERATION - 0.1) {
 				if (theTruck.getAcceleration() < 0) {
 					theTruck.setAcceleration(0);
 				} else {

@@ -25,6 +25,7 @@ public class TruckDriver {
 	private static int desiredTruckSimPop = 0;
 	private static long lastTickTime = 0l;
 	private static long lastTickInterval = 0l;
+	private static long startTime = 0l;
 	private static RollingAverage averageEndToEnd = new RollingAverage(300);
 
 	// variables for reinitializing
@@ -150,6 +151,7 @@ public class TruckDriver {
 								+ Controller.RESPONSE + "," + requestType + ",";
 						switch (requestType) {
 						case Controller.START_SIM:
+							startTime = System.currentTimeMillis();
 							System.out
 									.println("[NORMAL] Received start command.");
 							running = true;
@@ -201,13 +203,15 @@ public class TruckDriver {
 						// handle incoming data
 						switch (requestType) {
 						case Controller.POS_CACHE:
-							double[] receivedPosCache = new double[desiredTruckSimPop];
-							for (int i = 0; i < receivedPosCache.length; i++) {
-								receivedPosCache[i] = Double
-										.parseDouble(receivedMessage[i + 3]);
-							}
-							if(initialized) {
-								theTruck.setTruckPosCache(receivedPosCache);
+							if ((System.currentTimeMillis() - startTime) > 1000) {
+								double[] receivedPosCache = new double[desiredTruckSimPop];
+								for (int i = 0; i < receivedPosCache.length; i++) {
+									receivedPosCache[i] = Double
+											.parseDouble(receivedMessage[i + 3]);
+								}
+								if (initialized) {
+									theTruck.setTruckPosCache(receivedPosCache);
+								}
 							}
 							break;
 						case Controller.ADDR_CACHE:
@@ -381,9 +385,11 @@ public class TruckDriver {
 										+ " || Hello Sent:"
 										+ theTruck.getHelloMessagesSent();
 							}
-							if((theTruck.getLastRoundTripTime() / 2l) != lastEndToEndValue) {
-								lastEndToEndValue = theTruck.getLastRoundTripTime() / 2l;
-								averageEndToEnd.add((double)theTruck.getLastRoundTripTime() / 2000000.0);
+							if ((theTruck.getLastRoundTripTime() / 2l) != lastEndToEndValue) {
+								lastEndToEndValue = theTruck
+										.getLastRoundTripTime() / 2l;
+								averageEndToEnd.add((double) theTruck
+										.getLastRoundTripTime() / 2000000.0);
 							}
 							String visMessage = ""
 									+ theTruck.getTruckNumber()
@@ -395,9 +401,11 @@ public class TruckDriver {
 									+ "Truck Number: "
 									+ theTruck.getTruckNumber()
 									+ "     Last End to End Time: "
-									+ df.format((double)theTruck.getLastRoundTripTime() / 2000000.0)
+									+ df.format((double) theTruck
+											.getLastRoundTripTime() / 2000000.0)
 									+ " ms"
-									+ " || Average:" + df.format(averageEndToEnd.getAverage())
+									+ " || Average:"
+									+ df.format(averageEndToEnd.getAverage())
 									+ "\n"
 									+ theTruck.getConvoyID()
 									+ "\nOrder: "
@@ -430,13 +438,14 @@ public class TruckDriver {
 									+ theTruck.getLastAIProcessTime()
 									+ " nanoseconds"
 									+ "\nNew Msg Interval:"
-									+ df.format((double)theTruck.getLastMessageInterval() / 1000000.0)
+									+ df.format((double) theTruck
+											.getLastMessageInterval() / 1000000.0)
 									+ " ms"
 									+ "\nWhole Tick:"
-									+ df.format((double)lastTickTime / 1000000.0)
+									+ df.format((double) lastTickTime / 1000000.0)
 									+ " ms"
 									+ "\nWhole Tick Interval:"
-									+ df.format((double)lastTickInterval / 1000000.0)
+									+ df.format((double) lastTickInterval / 1000000.0)
 									+ " nms"
 									+ "\nRUNNING TIME================"
 									+ "\n"

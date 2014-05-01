@@ -11,8 +11,8 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 	private static final int MPR_SELECTOR_TABLE_RATE = 1;
 	//
 	private static final int SEND_HELLO_RATE = 10;
-	
-	//debug rate
+
+	// debug rate
 	private static final int DEBUG_RATE = 1;
 	private long lastDebugMessageTime = 0l;
 	// magical terminating character (should never show up in
@@ -34,7 +34,7 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 
 	public MPRDiscoveryAlgorithm(int numberOfTrucks) {
 		mNeighborTable = new ArrayList<ArrayList<Integer>>(11);
-		for(int i = 0; i<=10;i++){
+		for (int i = 0; i <= 10; i++) {
 			mNeighborTable.add(new ArrayList<Integer>());
 		}
 		mSequenceNumberCache = new int[numberOfTrucks];
@@ -112,8 +112,9 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 				}
 				forwardedMessage += TERMINATING_STRING;
 
-				/*new condition added. This truck will only forward messages received from trucks in the
-				 * MPR selector table
+				/*
+				 * new condition added. This truck will only forward messages
+				 * received from trucks in the MPR selector table
 				 */
 				if (this.mMPRSelectorTable.contains(messageTruckNumber)) {
 					// determine whether those messages are going to make it
@@ -128,8 +129,7 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 						}
 					}
 				}
-				
-				
+
 			} else {
 				theTruck.increaseMessagesDropped();
 			}
@@ -150,11 +150,11 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 			String[] messageSplit = messageTruncated.split(",");
 
 			int helloMessageSequenceNumber = Integer.parseInt(messageSplit[0]);
-			
+
 			// first element is who it is from (i.e. in this case it is from
 			// truck #6)
 			int receivedFrom = Integer.parseInt(messageSplit[1]);
-			
+
 			// neighbor table uses first element to specify who this
 			// neighborList belongs too (i.e. 6)
 			neighborList.add(receivedFrom);
@@ -166,11 +166,13 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 				i++;
 			}
 
-			// let's update mNeighborTable with the most recent list from the transmitting truck
+			// let's update mNeighborTable with the most recent list from the
+			// transmitting truck
 			mNeighborTable.set(receivedFrom, neighborList);
 
 			// we will now parse the second half of the packet that is after the
-			// -1 (i.e. {4,8}) - this part of the packet notifies all receivers of this packet that
+			// -1 (i.e. {4,8}) - this part of the packet notifies all receivers
+			// of this packet that
 			// it should forward packets received from the transmitter.
 			i++;
 			ArrayList<Integer> receivedMPRRequests = new ArrayList<Integer>();
@@ -218,10 +220,11 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 		return message;
 	}
 
-	//#1
+	// #1
 	public synchronized String createHelloMessage(Truck theTruck) {
 		// indexes marked after lines
-		String message = "" + "MSG_TYPE_HELLO"
+		String message = ""
+				+ "MSG_TYPE_HELLO"
 				// 0 - sequence number
 				+ mSequenceNumberCache[theTruck.getTruckNumber() - 1] + ","
 				+ theTruck.getTruckNumber() + getOneHopList(theTruck) + ","
@@ -294,8 +297,8 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 			 */
 			if ((Math.abs(System.nanoTime() - lastMPRCalcTime) / 1000000000.0) > (1.0 / (double) MPR_SELECTOR_TABLE_RATE)) {
 				ArrayList<ArrayList<Integer>> preparedNeighborTable = new ArrayList<ArrayList<Integer>>();
-				for(ArrayList<Integer> currentList : mNeighborTable){
-					if(!currentList.isEmpty()){
+				for (ArrayList<Integer> currentList : mNeighborTable) {
+					if (!currentList.isEmpty()) {
 						preparedNeighborTable.add(currentList);
 					}
 				}
@@ -306,12 +309,12 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 			}
 
 		}
-		//check if it is time to send a hello message
-		if(((System.nanoTime() - lastHelloMessageTime) / 1000000000.0) > (.0 / (double) SEND_HELLO_RATE)){
+		// check if it is time to send a hello message
+		if (((System.nanoTime() - lastHelloMessageTime) / 1000000000.0) > (.0 / (double) SEND_HELLO_RATE)) {
 			lastHelloMessageTime = System.nanoTime();
 			String newHelloMessage = createHelloMessage(theTruck);
 			theTruck.increaseHelloMessagesCreated();
-			
+
 			for (int i = 0; i < theTruck.getTruckPosCache().length; i++) {
 				// roll the dice
 				if ((i + 1) != theTruck.getTruckNumber()

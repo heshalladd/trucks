@@ -49,7 +49,7 @@ public class Controller {
 		final String ANSI_HOME = "\u001b[H";
 		System.out.print(ANSI_CLS + ANSI_HOME);
 		System.out.println("[NORMAL] Launching the controller.");
-		//TODO: check this input
+		// TODO: check this input
 		desiredTruckSimPop = Integer.parseInt(args[0]);
 		requests = new LinkedBlockingQueue[desiredTruckSimPop];
 		for (int i = 0; i < desiredTruckSimPop; i++) {
@@ -184,7 +184,8 @@ public class Controller {
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
-				System.out.println("[SEVERE] IO Exception for Truck " + truckNumber);
+				System.out.println("[SEVERE] IO Exception for Truck "
+						+ truckNumber);
 				e.printStackTrace();
 			}
 		}
@@ -314,22 +315,23 @@ public class Controller {
 				while (true) {
 					waitForCollisionFromTruck();
 					Arrays.fill(truckPosCache, 0.0);
-					if((System.currentTimeMillis() - lastStartTime) < 10000) {
+					if ((System.currentTimeMillis() - lastStartTime) < 10000) {
 						System.out
 								.println("[WARNING] There was a collision while stabilizing. Attempting to start new simulation.");
 						waitAndStart();
 					} else {
-						System.out.println("[UIH] Type \"start\" to restart the simulation.");
+						System.out
+								.println("[UIH] Type \"start\" to restart the simulation.");
 						waitForStartFromUser();
 					}
-					
+
 					lastStartTime = System.currentTimeMillis();
-					
+
 				}
 
 			}
 		}
-		
+
 		private void waitAndStart() {
 			try {
 				Thread.sleep(15);
@@ -375,8 +377,9 @@ public class Controller {
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
-				if((System.currentTimeMillis() - simulationStartTime)/1000 >= 300) {
-					System.out.println("[NORMAL] Simulation ended (5 minute timer) Type \"start\" to run again.");
+				if ((System.currentTimeMillis() - simulationStartTime) / 1000 >= 300) {
+					System.out
+							.println("[NORMAL] Simulation ended (5 minute timer) Type \"start\" to run again.");
 					for (int i = 0; i < requests.length; i++) {
 						try {
 							requests[i].put("" + (i + 1) + "," + REQUEST + ","

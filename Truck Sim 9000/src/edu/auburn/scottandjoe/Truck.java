@@ -222,7 +222,7 @@ public class Truck {
 	public double getAcceleration() {
 		return acceleration;
 	}
-	
+
 	public int getCacheUpdates() {
 		return cacheUpdates;
 	}
@@ -252,29 +252,29 @@ public class Truck {
 	public int getDesiredTruckSimPop() {
 		return desiredTruckSimPop;
 	}
-	
+
 	public int getEndToEndSequence() {
 		return endToEndSequence;
 	}
-	
+
 	public int getFAType() {
-		if(theFA instanceof BasicFloodingAlgorithm){
+		if (theFA instanceof BasicFloodingAlgorithm) {
 			return 1;
 		}
-		if(theFA instanceof MPRDiscoveryAlgorithm){
+		if (theFA instanceof MPRDiscoveryAlgorithm) {
 			return 2;
 		}
 		return 0;
 	}
-	
+
 	public int getHelloMessagesCreated() {
 		return helloMessagesCreated;
 	}
-	
+
 	public int getHelloMessagesSent() {
 		return helloMessagesSent;
 	}
-	
+
 	public int getInitializations() {
 		return initializations;
 	}
@@ -282,11 +282,11 @@ public class Truck {
 	public int getLane() {
 		return lane;
 	}
-	
+
 	public long getLastAIProcessTime() {
 		return lastAIProcessTime;
 	}
-	
+
 	public long getLastEndToEndSendTime() {
 		return lastEndToEndSendTime;
 	}
@@ -298,7 +298,7 @@ public class Truck {
 	public String getLastCreatedMessage() {
 		return lastCreatedMessage;
 	}
-	
+
 	public long getLastMessageInterval() {
 		return lastMessageInterval;
 	}
@@ -310,11 +310,11 @@ public class Truck {
 	public long getLastMessageMapTime() {
 		return lastMessageMapTime;
 	}
-	
+
 	public String getLastMessageReceived() {
 		return lastMessageReceived;
 	}
-	
+
 	public long getLastRoundTripTime() {
 		return lastRoundTripTime;
 	}
@@ -338,7 +338,7 @@ public class Truck {
 	public int getMessagesForwarded() {
 		return messagesForwarded;
 	}
-	
+
 	public int getMessagesReceived() {
 		return messagesReceived;
 	}
@@ -425,15 +425,16 @@ public class Truck {
 		// of from updateMental()
 		while (!incomingUDPMessages.isEmpty() && theFA != null) {
 			String messageToProcess = incomingUDPMessages.remove();
-			String[] endToEndCheck = messageToProcess.split(Controller.TERMINATING_STRING)[0].split(",");
-			//check if you have received this end to end message before
-			if(endToEndCheck[0].equals("e2e") && Integer.parseInt(endToEndCheck[1]) > endToEndSequence) {
+			String[] endToEndCheck = messageToProcess
+					.split(Controller.TERMINATING_STRING)[0].split(",");
+			// check if you have received this end to end message before
+			if (endToEndCheck[0].equals("e2e")
+					&& Integer.parseInt(endToEndCheck[1]) > endToEndSequence) {
 				endToEndSequence = Integer.parseInt(endToEndCheck[1]);
-				if(getConvoySize() == desiredTruckSimPop) {
-					//TODO: you are the end, start e2e response
+				if (getConvoySize() == desiredTruckSimPop) {
+					// TODO: you are the end, start e2e response
 					endToEndRespSequence = endToEndSequence;
-					String endToEndResp = "e2er,"
-							+ endToEndRespSequence
+					String endToEndResp = "e2er," + endToEndRespSequence
 							+ Controller.TERMINATING_STRING;
 					for (int i = 0; i < truckPosCache.length; i++) {
 						// roll the dice
@@ -442,26 +443,27 @@ public class Truck {
 							sendMessage((i + 1), endToEndResp);
 						}
 					}
-				}
-				else {
+				} else {
 					for (int i = 0; i < truckPosCache.length; i++) {
 						// roll the dice
 						if ((i + 1) != truckNumber
 								&& isMessageSuccessful(i + 1)) {
 							sendMessage((i + 1), messageToProcess);
 						}
-					}					
+					}
 				}
 				continue;
-			} else if (endToEndCheck[0].equals("e2er") && Integer.parseInt(endToEndCheck[1]) > endToEndRespSequence) {
+			} else if (endToEndCheck[0].equals("e2er")
+					&& Integer.parseInt(endToEndCheck[1]) > endToEndRespSequence) {
 				endToEndRespSequence = Integer.parseInt(endToEndCheck[1]);
-				if(probablyFirst) {
-					//its for you
-					if(endToEndRespSequence == endToEndSequence) {
-						lastRoundTripTime = System.nanoTime() - lastEndToEndSendTime;
+				if (probablyFirst) {
+					// its for you
+					if (endToEndRespSequence == endToEndSequence) {
+						lastRoundTripTime = System.nanoTime()
+								- lastEndToEndSendTime;
 					}
 				} else {
-					//not for you. pass it on
+					// not for you. pass it on
 					for (int i = 0; i < truckPosCache.length; i++) {
 						// roll the dice
 						if ((i + 1) != truckNumber
@@ -477,15 +479,15 @@ public class Truck {
 		}
 
 	}
-	
+
 	public void increaseHelloMessagesCreated() {
 		helloMessagesCreated++;
 	}
-	
+
 	public void increaseHelloMessagesSent() {
 		helloMessagesSent++;
 	}
-	
+
 	public void increaseMalformedMessagesReceived() {
 		malformedMessagesReceived++;
 	}
@@ -505,7 +507,7 @@ public class Truck {
 	public void increaseMessagesForwarded() {
 		messagesForwarded++;
 	}
-	
+
 	public void increaseMessagesReceived() {
 		messagesReceived++;
 	}
@@ -519,7 +521,7 @@ public class Truck {
 	public boolean isMessageSuccessful(int destinationTruckNumber) {
 		double chanceToSend = 0.0;
 		double distanceApart = 1000.0;
-		if(truckPosCache[destinationTruckNumber - 1] != 0) {
+		if (truckPosCache[destinationTruckNumber - 1] != 0) {
 			distanceApart = Math.abs(pos
 					- truckPosCache[destinationTruckNumber - 1]);
 		}
@@ -590,7 +592,7 @@ public class Truck {
 	public void setDesiredPlaceInConvoy(int desiredPlaceInConvoy) {
 		this.desiredPlaceInConvoy = desiredPlaceInConvoy;
 	}
-	
+
 	public void setEndToEndSequence(int seqNumber) {
 		this.endToEndSequence = seqNumber;
 	}
@@ -606,11 +608,11 @@ public class Truck {
 	public void setLastAIProcessTime(long timeDiff) {
 		this.lastAIProcessTime = timeDiff;
 	}
-	
+
 	public void setLastEndToEndSendTime(long timeNano) {
 		this.lastEndToEndSendTime = timeNano;
 	}
-	
+
 	public void setLastCreatedMessage(String message) {
 		this.lastCreatedMessage = message;
 	}
@@ -618,11 +620,11 @@ public class Truck {
 	public void setLastForwardedMessage(String message) {
 		lastForwardedMessage = message;
 	}
-	
+
 	public void setLastMessageInterval(long timeDiff) {
 		this.lastMessageInterval = timeDiff;
 	}
-	
+
 	public void setLastMessageReceived(String message) {
 		this.lastMessageReceived = message;
 	}
@@ -707,7 +709,7 @@ public class Truck {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
+
 		}
 		Iterator<MessageKeys> mapIterator = messageMap.keySet().iterator();
 		while (mapIterator.hasNext()) {
@@ -759,7 +761,8 @@ public class Truck {
 		}
 	}
 
-	public void updateMental() throws NumberFormatException, FatalTruckException {
+	public void updateMental() throws NumberFormatException,
+			FatalTruckException {
 		handleMessages();
 		theFA.doExtra(this);
 		// call the truck AI class
@@ -829,9 +832,9 @@ public class Truck {
 					// System.out.println("[NORMAL] Received packet:"
 					// + new String(receivedPacket.getData()));
 					// short parse to handle end to end packets
-					String receivedMessage = new String(receivedPacket.getData());
-					incomingUDPMessages
-							.add(receivedMessage);
+					String receivedMessage = new String(
+							receivedPacket.getData());
+					incomingUDPMessages.add(receivedMessage);
 				}
 			} catch (IOException e) {
 				System.out
