@@ -174,7 +174,7 @@ public class TruckAI {
 			}
 			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < MAX_CONVOY_GAP) {
 				desiredSpeed = STABILIZING_SPEED;
-				if(nextTruckGap > 12) {
+				if(nextTruckGap > 15) {
 					desiredSpeed = STABILIZING_SPEED + 0.1;
 				}
 			}
@@ -187,10 +187,18 @@ public class TruckAI {
 				desiredSpeed -= BRAKE_PEDAL_DECEL_VALUE;
 			}
 			// if not, go catching speed.
-			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < 100.0) {
+			if (nextTruckGap > MAX_CONVOY_GAP && nextTruckGap < 100.0) {
 				desiredSpeed = CATCHING_SPEED;
 			}
 			//if in sweetspot
+			if (nextTruckGap > MIN_CONVOY_GAP && nextTruckGap < MAX_CONVOY_GAP) {
+				if(nextTruck != null) {
+					desiredSpeed = nextTruck.getSpeed();
+				} else {
+				desiredSpeed = STABILIZING_SPEED;
+				}
+			}
+			
 			// if gap is substantial, drive really fast
 			if (nextTruckGap > 100) {
 				desiredSpeed = MAX_REASONABLE_SPEED;

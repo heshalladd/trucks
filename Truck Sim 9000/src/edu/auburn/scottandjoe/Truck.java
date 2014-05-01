@@ -27,9 +27,9 @@ public class Truck {
 	public static final double MAX_INITIAL_POS = 700;
 
 	// 80mph is 35.7m/s
-	public static final double MAX_REASONABLE_SPEED = 35.7;
+	public static final double MAX_REASONABLE_SPEED = 35.7632;
 	// 55mph is 24.6m/s
-	public static final double MIN_REASONABLE_SPEED = 24.6;
+	public static final double MIN_REASONABLE_SPEED = 30.3987;
 
 	// initialization parameter constants
 	public static final int RANDOMIZE_INT = -10000;
@@ -428,7 +428,7 @@ public class Truck {
 			String[] endToEndCheck = messageToProcess.split(Controller.TERMINATING_STRING)[0].split(",");
 			//check if you have received this end to end message before
 			if(endToEndCheck[0].equals("e2e") && Integer.parseInt(endToEndCheck[1]) > endToEndSequence) {
-				endToEndSequence = Integer.parseInt(endToEndCheck[2]);
+				endToEndSequence = Integer.parseInt(endToEndCheck[1]);
 				if(getConvoySize() == desiredTruckSimPop) {
 					//TODO: you are the end, start e2e response
 					endToEndRespSequence = endToEndSequence;
