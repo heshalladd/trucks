@@ -9,5 +9,4 @@ public class MainMethod {
 		receiver.setTruckDataList(truckDataList);
 		receiver.startUDPListener();
 	}
-
 }
