@@ -163,7 +163,7 @@ public class TruckDriver {
 								floodingAlgorithm = new BasicFloodingAlgorithm();
 							} else if (floodingAlgorithmType == 2) {
 								// set to the MPR FA
-								floodingAlgorithm = new MPRDiscoveryAlgorithm();
+								floodingAlgorithm = new MPRDiscoveryAlgorithm(desiredTruckSimPop);
 							}
 							theTruck = new Truck(initTruckNumber, initLane,
 									initPos, initSpeed, initAcceleration,
