@@ -60,6 +60,8 @@ public class Truck {
 	private int messagesDropped = 0;
 	private int messagesCreated = 0;
 	private int messagesSent = 0;
+	private int messageSendAttempts = 0;
+	private int messageSendFailures = 0;
 	private int messagesFailed = 0;
 	private int endToEndSequence = 0;
 	private int endToEndRespSequence = 0;
@@ -87,6 +89,7 @@ public class Truck {
 
 	// caching
 	private int cacheUpdates = 0;
+	private int cacheValueUpdates = 0;
 	private int initializations = 0;
 	private Truck[] truckCache;
 	private int[] truckSequenceCache;
@@ -226,6 +229,10 @@ public class Truck {
 	public int getCacheUpdates() {
 		return cacheUpdates;
 	}
+	
+	public int getCacheValueUpdates() {
+		return cacheValueUpdates;
+	}
 
 	public String getConvoyID() {
 		return convoyID;
@@ -342,6 +349,14 @@ public class Truck {
 	public int getMessagesReceived() {
 		return messagesReceived;
 	}
+	
+	public int getMessageSendAttempts() {
+		return messageSendAttempts;
+	}
+	
+	public int getMessageSendFailures() {
+		return messageSendFailures;
+	}
 
 	public int getMessagesSent() {
 		return messagesSent;
@@ -360,6 +375,12 @@ public class Truck {
 				nextTruckPos = nextTruck.getPos();
 			}
 		}
+		//clear weird cache stuff if it exists
+		if(nextTruckPos - pos > 200 && nextTruck != null ) {
+			//reset the cache for that entry
+			truckInitialized[nextTruck.getTruckNumber() - 1] = false;
+		}
+		
 		if (nextTruckPos == 9999999999.0) {
 			return 0;
 		} else {
@@ -511,6 +532,10 @@ public class Truck {
 	public void increaseMessagesReceived() {
 		messagesReceived++;
 	}
+	
+	public void increaseMessageSendAttempts() {
+		messageSendAttempts++;
+	}
 
 	public void increaseMessagesSent() {
 		messagesSent++;
@@ -537,11 +562,13 @@ public class Truck {
 		}
 
 		// roll the dice
+		messageSendAttempts++;
 		Random rand = new Random();
 		if (chanceToSend >= rand.nextDouble()) {
 			return true;
 		} else {
 			increaseMessagesFailed();
+			messageSendFailures++;
 			return false;
 		}
 
@@ -685,9 +712,10 @@ public class Truck {
 	// NOTE: This does not check if the sequence number is new.
 	public void updateCache(HashMap<MessageKeys, String> messageMap,
 			int messageTruckNumber) {
-		cacheUpdates++;
 		lastMessageMap = messageMap;
 		lastMessageMapTime = System.currentTimeMillis();
+		cacheUpdates++;
+		cacheValueUpdates++;
 		int truckIndex = messageTruckNumber - 1;
 		if (!truckInitialized[truckIndex]) {
 			initializations++;
@@ -719,41 +747,51 @@ public class Truck {
 				int sequenceNumber = Integer.decode(messageMap.get(key));
 				truckCache[truckIndex].setSequenceNumber(sequenceNumber);
 				truckSequenceCache[truckIndex] = sequenceNumber;
+				cacheValueUpdates++;
 				break;
 			case ACCELERATION:
 				double acceleration = Double.parseDouble(messageMap.get(key));
 				truckCache[truckIndex].setAcceleration(acceleration);
+				cacheValueUpdates++;
 				break;
 			case CONVOY_ID:
 				truckCache[truckIndex].setConvoyID(messageMap.get(key));
+				cacheValueUpdates++;
 				break;
 			case DESIRED_LANE:
 				int desiredLane = Integer.decode(messageMap.get(key));
 				truckCache[truckIndex].setDesiredLane(desiredLane);
+				cacheValueUpdates++;
 				break;
 			case DESIRED_PIC:
 				int desiredPIC = Integer.decode(messageMap.get(key));
 				truckCache[truckIndex].setDesiredPlaceInConvoy(desiredPIC);
+				cacheValueUpdates++;
 				break;
 			case LANE:
 				int lane = Integer.decode(messageMap.get(key));
 				truckCache[truckIndex].setLane(lane);
+				cacheValueUpdates++;
 				break;
 			case ORDER_IN_CONVOY:
 				int orderInConvoy = Integer.decode(messageMap.get(key));
 				truckCache[truckIndex].setOrderInConvoy(orderInConvoy);
+				cacheValueUpdates++;
 				break;
 			case POSITION:
 				double position = Double.parseDouble(messageMap.get(key));
 				truckCache[truckIndex].setPos(position);
+				cacheValueUpdates++;
 				break;
 			case PROBABLY_FIRST:
 				boolean probFirst = Boolean.parseBoolean(messageMap.get(key));
 				truckCache[truckIndex].setProbablyFirst(probFirst);
+				cacheValueUpdates++;
 				break;
 			case SPEED:
 				double speed = Double.parseDouble(messageMap.get(key));
 				truckCache[truckIndex].setSpeed(speed);
+				cacheValueUpdates++;
 				break;
 			default:
 				break;

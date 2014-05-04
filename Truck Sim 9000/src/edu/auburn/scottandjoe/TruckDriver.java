@@ -151,6 +151,7 @@ public class TruckDriver {
 								+ Controller.RESPONSE + "," + requestType + ",";
 						switch (requestType) {
 						case Controller.START_SIM:
+							averageEndToEnd = new RollingAverage(300);
 							startTime = System.currentTimeMillis();
 							System.out
 									.println("[NORMAL] Received start command.");
@@ -378,7 +379,9 @@ public class TruckDriver {
 									+ " || Sent:" + theTruck.getMessagesSent()
 									+ " || Failed:"
 									+ theTruck.getMessagesFailed() + " || Bad:"
-									+ theTruck.getMalformedMessagesReceived();
+									+ theTruck.getMalformedMessagesReceived()
+									+ "\nOverall Attempts:" + theTruck.getMessageSendAttempts()
+									+ " || Overall Failures" + theTruck.getMessageSendFailures();
 							if (theTruck.getFAType() == 2) {
 								messagesOutput += "\nHello Created:"
 										+ theTruck.getHelloMessagesCreated()
@@ -427,6 +430,7 @@ public class TruckDriver {
 									+ "\nCACHING===================="
 									+ "\nCache Updates:"
 									+ theTruck.getCacheUpdates()
+									+ " // " + theTruck.getCacheValueUpdates()
 									+ " || Initializations:"
 									+ theTruck.getInitializations()
 									+ "\n"
@@ -444,7 +448,7 @@ public class TruckDriver {
 									+ "\nWhole Tick:"
 									+ df.format((double) lastTickTime / 1000000.0)
 									+ " ms"
-									+ "\nWhole Tick Interval:"
+									+ " || Whole Tick Interval:"
 									+ df.format((double) lastTickInterval / 1000000.0)
 									+ " nms"
 									+ "\nRUNNING TIME================"

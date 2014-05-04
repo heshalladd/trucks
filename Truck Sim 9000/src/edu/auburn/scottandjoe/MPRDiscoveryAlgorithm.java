@@ -54,6 +54,7 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 		String messageType = messageTruncated.substring(0, 14);
 		messageTruncated = messageTruncated.substring(14,
 				messageTruncated.length());
+		theTruck.increaseMessagesReceived();
 
 		if (messageType.equals("MSG_TYPE_FLOOD")) {
 			String[] messageSplit = messageTruncated.split(",");
@@ -296,14 +297,14 @@ public class MPRDiscoveryAlgorithm implements FloodingAlgorithm {
 			 * this trucks MPR's are
 			 */
 			if ((Math.abs(System.nanoTime() - lastMPRCalcTime) / 1000000000.0) > (1.0 / (double) MPR_SELECTOR_TABLE_RATE)) {
-				ArrayList<ArrayList<Integer>> preparedNeighborTable = new ArrayList<ArrayList<Integer>>();
-				for (ArrayList<Integer> currentList : mNeighborTable) {
-					if (!currentList.isEmpty()) {
-						preparedNeighborTable.add(currentList);
-					}
-				}
+				//ArrayList<ArrayList<Integer>> preparedNeighborTable = new ArrayList<ArrayList<Integer>>();
+				//for (ArrayList<Integer> currentList : mNeighborTable) {
+				//	if (!currentList.isEmpty()) {
+				//		preparedNeighborTable.add(currentList);
+				//	}
+				//}
 				this.mMPRs = MPRAlgorithm.getMPR(getOneHopArrayList(theTruck),
-						preparedNeighborTable);
+						mNeighborTable);
 				long theTime2 = System.nanoTime();
 				lastMPRCalcTime = theTime2;
 			}
